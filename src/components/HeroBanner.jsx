@@ -58,30 +58,7 @@ export default function HeroBanner() {
                 </div>
             </div>
 
-            {/* 3 functional promo banners */}
-            <div className="promo-banners">
-                <div className="promo-banner" onClick={() => navigate('/products')} style={{ cursor: 'pointer' }}>
-                    <span className="promo-icon">🚚</span>
-                    <div className="promo-text">
-                        <strong>Free Delivery</strong>
-                        <span>On orders above UGX 50,000</span>
-                    </div>
-                </div>
-                <div className="promo-banner" onClick={() => navigate('/products?category=vegetables')} style={{ cursor: 'pointer' }}>
-                    <span className="promo-icon">🌿</span>
-                    <div className="promo-text">
-                        <strong>100% Farm Fresh</strong>
-                        <span>Sourced from local Ugandan farms</span>
-                    </div>
-                </div>
-                <div className="promo-banner" onClick={() => window.open('https://wa.me/256702370441', '_blank')} style={{ cursor: 'pointer' }}>
-                    <span className="promo-icon">📱</span>
-                    <div className="promo-text">
-                        <strong>Order via WhatsApp</strong>
-                        <span>Quick replies & same-day delivery</span>
-                    </div>
-                </div>
-            </div>
+
         </section>
     );
 }
