@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { heroSlides } from '../data/products';
 import { FiChevronLeft, FiChevronRight, FiArrowRight } from 'react-icons/fi';
 
 export default function HeroBanner() {
     const [current, setCurrent] = useState(0);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -57,27 +58,27 @@ export default function HeroBanner() {
                 </div>
             </div>
 
-            {/* 3 promo banners */}
+            {/* 3 functional promo banners */}
             <div className="promo-banners">
-                <div className="promo-banner">
+                <div className="promo-banner" onClick={() => navigate('/products')} style={{ cursor: 'pointer' }}>
                     <span className="promo-icon">🚚</span>
                     <div className="promo-text">
-                        <strong>Free Same-Day Delivery</strong>
-                        <span>On orders above KSh 1,500</span>
+                        <strong>Free Delivery</strong>
+                        <span>On orders above UGX 50,000</span>
                     </div>
                 </div>
-                <div className="promo-banner">
+                <div className="promo-banner" onClick={() => navigate('/products?category=vegetables')} style={{ cursor: 'pointer' }}>
                     <span className="promo-icon">🌿</span>
                     <div className="promo-text">
                         <strong>100% Farm Fresh</strong>
-                        <span>Sourced directly from local farms</span>
+                        <span>Sourced from local Ugandan farms</span>
                     </div>
                 </div>
-                <div className="promo-banner">
-                    <span className="promo-icon">💰</span>
+                <div className="promo-banner" onClick={() => window.open('https://wa.me/256702370441', '_blank')} style={{ cursor: 'pointer' }}>
+                    <span className="promo-icon">📱</span>
                     <div className="promo-text">
-                        <strong>Best Prices Guaranteed</strong>
-                        <span>We match any lower market price</span>
+                        <strong>Order via WhatsApp</strong>
+                        <span>Quick replies & same-day delivery</span>
                     </div>
                 </div>
             </div>

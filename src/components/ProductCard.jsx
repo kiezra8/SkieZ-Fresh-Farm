@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FiHeart } from 'react-icons/fi';
 import { useCart } from '../context/CartContext';
 
@@ -14,6 +15,7 @@ function Stars({ rating }) {
 
 export default function ProductCard({ product }) {
     const { addToCart } = useCart();
+    const navigate = useNavigate();
     const [liked, setLiked] = useState(false);
     const [added, setAdded] = useState(false);
 
@@ -24,8 +26,12 @@ export default function ProductCard({ product }) {
         setTimeout(() => setAdded(false), 1500);
     };
 
+    const handleCardClick = () => {
+        navigate(`/product/${product.id}`);
+    };
+
     return (
-        <div className="product-card">
+        <div className="product-card" onClick={handleCardClick} style={{ cursor: 'pointer' }}>
             <div className="product-img-wrap">
                 <img src={product.image} alt={product.name} loading="lazy" />
                 {product.discount > 0 && (
@@ -59,7 +65,7 @@ export default function ProductCard({ product }) {
                 className={`product-add-btn${added ? ' added' : ''}`}
                 onClick={handleAdd}
             >
-                {added ? '✓ Added to Cart' : 'Add to Cart'}
+                {added ? '✓ Added!' : 'Add to Cart'}
             </button>
         </div>
     );
