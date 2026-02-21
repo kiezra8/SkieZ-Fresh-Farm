@@ -1,29 +1,22 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// When deployed to GitHub Pages the URL is:
-//   https://<username>.github.io/<repo-name>/
-// The base must match the repo name exactly.
-// Change 'skiez-fresh-farm' below to match YOUR GitHub repo name if different.
-const repoName = 'skiez-fresh-farm'
+// GitHub Actions automatically sets GITHUB_REPOSITORY as "username/repo-name"
+// We extract just the repo name to use as the base path for GitHub Pages
+// Locally (no GITHUB_REPOSITORY set) → base is '/'
+const base = process.env.GITHUB_REPOSITORY
+    ? `/${process.env.GITHUB_REPOSITORY.split('/')[1]}/`
+    : '/'
 
 export default defineConfig({
     plugins: [react()],
-    base: process.env.NODE_ENV === 'production' ? `/${repoName}/` : '/',
+    base,
     server: {
         port: 3000,
         open: true
     },
     build: {
         outDir: 'dist',
-        sourcemap: false,
-        rollupOptions: {
-            output: {
-                manualChunks: {
-                    vendor: ['react', 'react-dom', 'react-router-dom'],
-                    icons: ['react-icons']
-                }
-            }
-        }
+        sourcemap: false
     }
 })
