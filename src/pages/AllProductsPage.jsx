@@ -97,7 +97,10 @@ export default function AllProductsPage() {
                         <p style={{ marginTop: 12, fontSize: 15 }}>No products found matching your search.</p>
                     </div>
                 ) : (
-                    <div className="products-grid">
+                    <div
+                        className="products-grid"
+                        style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}
+                    >
                         {filtered.map(p => <ProductCard key={p.id} product={p} />)}
                     </div>
                 )}
