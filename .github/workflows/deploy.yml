@@ -32,8 +32,9 @@ jobs:
 
       - name: Build
         run: npm run build
-        env:
-          GITHUB_REPOSITORY: ${{ github.repository }}
+
+      - name: List dist folder (debug)
+        run: ls -la dist/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
