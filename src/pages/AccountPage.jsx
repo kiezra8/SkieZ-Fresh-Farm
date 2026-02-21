@@ -43,7 +43,7 @@ export default function AccountPage({ onChatOpen }) {
                     <div>
                         <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 3 }}>Refer a Friend & Earn!</div>
                         <div style={{ fontSize: 13, opacity: .85 }}>
-                            Share our number <strong>0702 370 441</strong> — you both get KSh 100 off your next order.
+                            Share our number <strong>+256 702 370 441</strong> — you both get UGX 5,000 off your next order.
                         </div>
                     </div>
                 </div>
@@ -65,7 +65,7 @@ export default function AccountPage({ onChatOpen }) {
                 </div>
 
                 <div style={{ marginTop: 24, fontSize: 12, color: '#bbb', textAlign: 'center' }}>
-                    📞 Need help? Call or WhatsApp us on <strong style={{ color: '#e63946' }}>0702 370 441</strong>
+                    📞 Need help? Call or WhatsApp us on <strong style={{ color: '#e63946' }}>+256 702 370 441</strong>
                 </div>
             </div>
         </div>

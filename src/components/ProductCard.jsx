@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FiHeart, FiStar } from 'react-icons/fi';
+import { FiHeart } from 'react-icons/fi';
 import { useCart } from '../context/CartContext';
 
 function Stars({ rating }) {
@@ -48,9 +48,9 @@ export default function ProductCard({ product }) {
                     <span className="rating-count">({product.reviews.toLocaleString()})</span>
                 </div>
                 <div className="product-price-row">
-                    <span className="price-current">KSh {product.price.toLocaleString()}</span>
+                    <span className="price-current">UGX {product.price.toLocaleString()}</span>
                     {product.originalPrice && (
-                        <span className="price-original">KSh {product.originalPrice.toLocaleString()}</span>
+                        <span className="price-original">UGX {product.originalPrice.toLocaleString()}</span>
                     )}
                 </div>
             </div>

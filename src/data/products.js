@@ -542,12 +542,12 @@ export const heroSlides = [
 ];
 
 export const tickerItems = [
-    { text: "Pishori Rice 2kg", price: "KSh 380", original: "KSh 430" },
-    { text: "Fresh Tomatoes 1kg", price: "KSh 180", original: "KSh 220" },
-    { text: "Sunflower Oil 2L", price: "KSh 520", original: "KSh 600" },
-    { text: "Avocados (3pcs)", price: "KSh 150", original: "KSh 200" },
-    { text: "Maize Flour 2kg", price: "KSh 160", original: "KSh 200" },
-    { text: "Eggs Tray (30)", price: "KSh 420", original: "KSh 480" },
-    { text: "Green Grams 500g", price: "KSh 110", original: "KSh 140" },
-    { text: "Pilau Masala 100g", price: "KSh 75", original: "KSh 100" },
+    { text: "Pishori Rice 2kg", price: "UGX 380", original: "UGX 430" },
+    { text: "Fresh Tomatoes 1kg", price: "UGX 180", original: "UGX 220" },
+    { text: "Sunflower Oil 2L", price: "UGX 520", original: "UGX 600" },
+    { text: "Avocados (3pcs)", price: "UGX 150", original: "UGX 200" },
+    { text: "Maize Flour 2kg", price: "UGX 160", original: "UGX 200" },
+    { text: "Eggs Tray (30)", price: "UGX 420", original: "UGX 480" },
+    { text: "Green Grams 500g", price: "UGX 110", original: "UGX 140" },
+    { text: "Pilau Masala 100g", price: "UGX 75", original: "UGX 100" },
 ];

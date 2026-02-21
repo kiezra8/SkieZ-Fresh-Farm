@@ -1,10 +1,29 @@
 import { useCart } from '../context/CartContext';
-import { FiX, FiPlus, FiMinus, FiTrash2, FiShoppingBag } from 'react-icons/fi';
+import { FiX, FiPlus, FiMinus, FiTrash2 } from 'react-icons/fi';
+
+function buildWhatsAppMessage(items, total, delivery) {
+    const lines = items.map(item =>
+        `• ${item.qty}x ${item.name} (${item.unit}) — UGX ${(item.price * item.qty).toLocaleString()}`
+    ).join('%0A');
+
+    const grandTotal = total + delivery;
+    const deliveryLine = delivery === 0 ? 'FREE ✅' : `UGX ${delivery.toLocaleString()}`;
+
+    const message =
+        `Hello SkieZ Fresh Farm! 🛒 I'd like to place an order:%0A%0A` +
+        `${lines}%0A%0A` +
+        `Delivery: ${deliveryLine}%0A` +
+        `*Total: UGX ${grandTotal.toLocaleString()}*%0A%0A` +
+        `Please confirm my order. Thank you!`;
+
+    return `https://wa.me/256702370441?text=${message}`;
+}
 
 export default function CartDrawer() {
     const { items, isOpen, setIsOpen, removeFromCart, updateQty, total, count } = useCart();
 
-    const delivery = total >= 1500 ? 0 : 150;
+    const delivery = total >= 50000 ? 0 : 5000;
+    const whatsappLink = buildWhatsAppMessage(items, total, delivery);
 
     return (
         <>
@@ -39,7 +58,7 @@ export default function CartDrawer() {
                                 <div className="cart-item-info">
                                     <div className="cart-item-name">{item.name}</div>
                                     <div className="cart-item-unit">{item.unit}</div>
-                                    <div className="cart-item-price">KSh {(item.price * item.qty).toLocaleString()}</div>
+                                    <div className="cart-item-price">UGX {(item.price * item.qty).toLocaleString()}</div>
                                     <div className="qty-control">
                                         <button className="qty-btn" onClick={() => updateQty(item.id, item.qty - 1)} aria-label="Decrease">
                                             <FiMinus size={12} />
@@ -62,26 +81,54 @@ export default function CartDrawer() {
                     <div className="cart-footer">
                         <div className="cart-subtotal">
                             <span>Subtotal</span>
-                            <span>KSh {total.toLocaleString()}</span>
+                            <span>UGX {total.toLocaleString()}</span>
                         </div>
                         <div className="cart-subtotal">
                             <span>Delivery</span>
                             <span style={{ color: delivery === 0 ? '#2d9e47' : 'inherit' }}>
-                                {delivery === 0 ? 'FREE 🎉' : `KSh ${delivery}`}
+                                {delivery === 0 ? 'FREE 🎉' : `UGX ${delivery.toLocaleString()}`}
                             </span>
                         </div>
                         {delivery > 0 && (
-                            <div style={{ fontSize: 11, color: '#999', marginBottom: 12 }}>
-                                Add KSh {(1500 - total).toLocaleString()} more for free delivery
+                            <div style={{ fontSize: 11, color: '#999', marginBottom: 8 }}>
+                                Add UGX {(50000 - total).toLocaleString()} more for free delivery
                             </div>
                         )}
                         <div className="cart-total">
                             <span>Total</span>
-                            <span>KSh {(total + delivery).toLocaleString()}</span>
+                            <span>UGX {(total + delivery).toLocaleString()}</span>
                         </div>
-                        <button className="checkout-btn">
-                            Proceed to Checkout →
-                        </button>
+
+                        {/* WhatsApp Order Button */}
+                        <a
+                            href={whatsappLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="checkout-btn"
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 10,
+                                background: '#25d366',
+                                textDecoration: 'none',
+                                color: '#fff',
+                                fontWeight: 700,
+                                fontSize: 15,
+                                padding: 14,
+                                borderRadius: 8,
+                                transition: 'background .2s'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#1da851'}
+                            onMouseLeave={e => e.currentTarget.style.background = '#25d366'}
+                        >
+                            <span style={{ fontSize: 22 }}>📱</span>
+                            Order via WhatsApp
+                        </a>
+
+                        <div style={{ fontSize: 11, color: '#aaa', textAlign: 'center', marginTop: 8 }}>
+                            Your order details will be sent automatically
+                        </div>
                     </div>
                 )}
             </aside>

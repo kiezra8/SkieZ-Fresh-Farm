@@ -1,7 +1,6 @@
 export default function ChatModal({ isOpen, onClose }) {
-    const phone = '0702370441';
-    const waLink = `https://wa.me/254${phone.slice(1)}?text=Hello%20SkieZ%20Fresh%20Farm!%20I%20would%20like%20to%20order%20some%20groceries.`;
-    const callLink = `tel:+254${phone.slice(1)}`;
+    const waLink = `https://wa.me/256702370441?text=Hello%20SkieZ%20Fresh%20Farm!%20I%20would%20like%20to%20order%20some%20groceries.`;
+    const callLink = `tel:+256702370441`;
 
     return (
         <>
@@ -18,7 +17,7 @@ export default function ChatModal({ isOpen, onClose }) {
                         </div>
                         <div className="contact-info">
                             <strong>WhatsApp Us</strong>
-                            <span>{phone} — Quick replies, order tracking</span>
+                            <span>Quick replies & order tracking</span>
                         </div>
                     </a>
 
@@ -28,7 +27,7 @@ export default function ChatModal({ isOpen, onClose }) {
                         </div>
                         <div className="contact-info">
                             <strong>Call Us Now</strong>
-                            <span>{phone} — Mon–Sat, 7am–8pm</span>
+                            <span>Mon – Sat, 7am – 8pm</span>
                         </div>
                     </a>
 
