@@ -32,23 +32,51 @@ export default function AccountPage({ onChatOpen }) {
 
     const clear = () => { setError(''); setSuccess(''); };
 
-    // ── Email sign in ──────────────────────────────────────────────────────────
+    // ── Friendly network error parser ─────────────────────────────────────────
+    const parseErr = (err) => {
+        if (!err) return '';
+        const msg = err.message || '';
+        if (msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network')) {
+            return 'Cannot reach Supabase — your project is likely PAUSED.\n\nFix: Go to supabase.com → open your project → click "Restore project" → wait 60 seconds → try again.';
+        }
+        if (msg.includes('Invalid login')) return 'Wrong email or password.';
+        if (msg.includes('Email not confirmed')) return 'Please confirm your email — check your inbox.';
+        if (msg.includes('User already registered')) return 'Email already registered. Try signing in instead.';
+        return msg || 'Something went wrong. Please try again.';
+    };
+
+    // ── Test connection ───────────────────────────────────────────────────────
+    const [testing, setTesting] = useState(false);
+    const testConnection = async () => {
+        setTesting(true); clear();
+        try {
+            const res = await fetch('https://cqxcbsixzcyhkgwwtdbd.supabase.co/rest/v1/', {
+                headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || '' }
+            });
+            if (res.ok || res.status === 400 || res.status === 404) {
+                setSuccess('✅ Supabase is reachable! If login still fails, check your email and password.');
+            } else if (res.status === 503) {
+                setError('Project is PAUSED (503).\nGo to supabase.com → your project → "Restore project".');
+            } else {
+                setError(`Server replied ${res.status}. Check your Supabase dashboard.`);
+            }
+        } catch {
+            setError('Cannot connect to Supabase at all.\n\nCheck:\n1. Your internet is working\n2. Project is not paused at supabase.com\n3. Dev server restarted after .env change (Ctrl+C → npm run dev)');
+        } finally { setTesting(false); }
+    };
+
+    // ── Email sign in ─────────────────────────────────────────────────────────
     const handleSignIn = async (e) => {
         e.preventDefault(); clear();
         if (!email || !password) { setError('Please fill in all fields.'); return; }
         setAuthLoading(true);
         const { error: err } = await login(email.trim(), password);
         setAuthLoading(false);
-        if (err) {
-            if (err.message?.includes('Invalid login')) setError('Wrong email or password.');
-            else if (err.message?.includes('Email not confirmed')) setError('Please confirm your email — check your inbox.');
-            else setError(err.message || 'Sign in failed.');
-        } else {
-            setAuthOpen(false); // collapse auth panel on success
-        }
+        if (err) setError(parseErr(err));
+        else setAuthOpen(false);
     };
 
-    // ── Email sign up ──────────────────────────────────────────────────────────
+    // ── Email sign up ─────────────────────────────────────────────────────────
     const handleSignUp = async (e) => {
         e.preventDefault(); clear();
         if (!fullName || !email || !password) { setError('Please fill in all fields.'); return; }
@@ -56,16 +84,17 @@ export default function AccountPage({ onChatOpen }) {
         setAuthLoading(true);
         const { error: err } = await register(email.trim(), password, fullName.trim());
         setAuthLoading(false);
-        if (err) setError(err.message || 'Sign up failed.');
+        if (err) setError(parseErr(err));
         else setSuccess('Account created! Check your email to confirm, then sign in.');
     };
 
-    // ── Google ─────────────────────────────────────────────────────────────────
+    // ── Google ────────────────────────────────────────────────────────────────
     const handleGoogle = async () => {
         clear();
         const { error: err } = await signInWithGoogle();
-        if (err) setError(err.message || 'Google sign in failed.');
+        if (err) setError(parseErr(err));
     };
+
 
     // ── Phone OTP ─────────────────────────────────────────────────────────────
     const handleSendOTP = async (e) => {
@@ -173,8 +202,18 @@ export default function AccountPage({ onChatOpen }) {
                                 </div>
 
                                 {/* Alerts */}
-                                {error && <div style={st.errorBox}>⚠️ {error}</div>}
-                                {success && <div style={st.successBox}>✅ {success}</div>}
+                                {error && (
+                                    <div style={st.errorBox}>
+                                        <span style={{ whiteSpace: 'pre-line' }}>⚠️ {error}</span>
+                                    </div>
+                                )}
+                                {success && <div style={st.successBox}>{success}</div>}
+
+                                {/* Test Connection button — always shown at top */}
+                                <button onClick={testConnection} disabled={testing} style={st.testBtn}>
+                                    {testing ? '🔄 Testing…' : '🔌 Test Supabase Connection'}
+                                </button>
+
 
                                 {/* ── Sign In ── */}
                                 {mode === MODE.SIGNIN && (
@@ -379,8 +418,9 @@ const st = {
         gap: 8, fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit',
     },
 
-    errorBox: { background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 9, padding: '9px 13px', color: '#dc2626', fontSize: 12, marginBottom: 12 },
-    successBox: { background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 9, padding: '9px 13px', color: '#16a34a', fontSize: 12, marginBottom: 12 },
+    errorBox: { background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 9, padding: '9px 13px', color: '#dc2626', fontSize: 12, marginBottom: 10 },
+    successBox: { background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 9, padding: '9px 13px', color: '#16a34a', fontSize: 12, marginBottom: 10 },
+    testBtn: { width: '100%', padding: '9px', background: '#f0f9ff', border: '1px dashed #93c5fd', borderRadius: 8, color: '#1d4ed8', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 12 },
 
     // Profile card (signed in)
     profileCard: { display: 'flex', alignItems: 'center', gap: 12, background: '#f8f8f8', borderRadius: 14, padding: '12px 14px', marginBottom: 20, border: '1px solid #eee' },
