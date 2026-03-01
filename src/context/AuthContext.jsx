@@ -13,12 +13,18 @@ export function AuthProvider({ children }) {
 
     // Boot: restore session from Supabase storage
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session);
-            setUser(session?.user ?? null);
-            setProfile(session?.user?.user_metadata ?? null);
-            setLoading(false);
-        });
+        supabase.auth.getSession()
+            .then(({ data: { session } }) => {
+                setSession(session);
+                setUser(session?.user ?? null);
+                setProfile(session?.user?.user_metadata ?? null);
+            })
+            .catch((err) => {
+                console.warn('[AuthContext] getSession failed:', err.message);
+            })
+            .finally(() => {
+                setLoading(false);
+            });
 
         // Listen to auth state changes (login, logout, token refresh)
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -26,6 +32,7 @@ export function AuthProvider({ children }) {
                 setSession(session);
                 setUser(session?.user ?? null);
                 setProfile(session?.user?.user_metadata ?? null);
+                setLoading(false);
             }
         );
 
