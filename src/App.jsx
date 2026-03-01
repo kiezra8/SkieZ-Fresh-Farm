@@ -10,10 +10,13 @@ import AllProductsPage from './pages/AllProductsPage';
 import CategoriesPage from './pages/CategoriesPage';
 import AccountPage from './pages/AccountPage';
 import ProductDetailPage from './pages/ProductDetailPage';
+import AdminPage from './pages/AdminPage';
 
 function AppInner() {
     const [chatOpen, setChatOpen] = useState(false);
     const location = useLocation();
+
+    const isAdmin = location.pathname.startsWith('/admin');
 
     const getActivePage = () => {
         if (location.pathname === '/') return 'Home';
@@ -25,9 +28,9 @@ function AppInner() {
 
     return (
         <>
-            <Navbar onChatOpen={() => setChatOpen(true)} activePage={getActivePage()} />
-            <CartDrawer />
-            <ChatModal isOpen={chatOpen} onClose={() => setChatOpen(false)} />
+            {!isAdmin && <Navbar onChatOpen={() => setChatOpen(true)} activePage={getActivePage()} />}
+            {!isAdmin && <CartDrawer />}
+            {!isAdmin && <ChatModal isOpen={chatOpen} onClose={() => setChatOpen(false)} />}
 
             <Routes>
                 <Route path="/" element={<HomePage />} />
@@ -35,10 +38,11 @@ function AppInner() {
                 <Route path="/products" element={<AllProductsPage />} />
                 <Route path="/product/:id" element={<ProductDetailPage />} />
                 <Route path="/account" element={<AccountPage onChatOpen={() => setChatOpen(true)} />} />
+                <Route path="/admin" element={<AdminPage />} />
                 <Route path="*" element={<HomePage />} />
             </Routes>
 
-            <Footer />
+            {!isAdmin && <Footer />}
         </>
     );
 }
