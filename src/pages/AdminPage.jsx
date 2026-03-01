@@ -52,18 +52,25 @@ function AdminLogin({ onLogin }) {
         setError('');
         if (!email || !password) { setError('Enter your email and password.'); return; }
         setLoading(true);
-        const { error: err } = await onLogin(email, password);
+        const { error: err } = await onLogin(email.trim().toLowerCase(), password);
         setLoading(false);
         if (err) {
-            if (err.message?.includes('Invalid login')) setError('Wrong password. Try again.');
-            else if (err.message?.includes('Email not confirmed')) setError('Please confirm your email first.');
-            else setError(err.message || 'Sign in failed. Check your details.');
+            const msg = err.message || '';
+            if (msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network'))
+                setError('Cannot connect to server. Check your internet and try again.');
+            else if (msg.includes('Invalid login') || msg.includes('invalid_credentials'))
+                setError('Wrong password. Make sure you signed up with this email first.');
+            else if (msg.includes('Email not confirmed'))
+                setError('Check your email inbox and click the confirmation link first.');
+            else if (msg.includes('User not found'))
+                setError('No account found. Go to /account and sign up first.');
+            else
+                setError(msg || 'Sign in failed.');
         }
     };
 
     return (
         <div style={ls.root}>
-            {/* Background blobs */}
             <div style={ls.blob1} />
             <div style={ls.blob2} />
 
@@ -88,8 +95,12 @@ function AdminLogin({ onLogin }) {
                 <div style={ls.appName}>SkieZ Fresh Farm</div>
                 <div style={ls.subtitle}>Admin Panel</div>
 
+                {/* "Already signed in elsewhere" tip */}
+                <div style={ls.infoBox}>
+                    💡 If you already signed in at <strong>/account</strong> with the admin email, just go back and visit <strong>/admin</strong> again — you'll be admitted automatically.
+                </div>
+
                 <form onSubmit={handleSubmit} style={ls.form}>
-                    {/* Email */}
                     <div style={ls.fieldWrap}>
                         <label style={ls.label}>Email Address</label>
                         <input
@@ -103,7 +114,6 @@ function AdminLogin({ onLogin }) {
                         />
                     </div>
 
-                    {/* Password */}
                     <div style={ls.fieldWrap}>
                         <label style={ls.label}>Password</label>
                         <div style={ls.pwWrap}>
@@ -111,7 +121,7 @@ function AdminLogin({ onLogin }) {
                                 type={showPw ? 'text' : 'password'}
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
-                                placeholder="Your password"
+                                placeholder="Enter your password"
                                 autoComplete="current-password"
                                 style={{ ...ls.input, paddingRight: 46 }}
                                 required
@@ -127,14 +137,12 @@ function AdminLogin({ onLogin }) {
                         </div>
                     </div>
 
-                    {/* Error */}
                     {error && (
                         <div style={ls.errorBox}>
                             ⚠️ {error}
                         </div>
                     )}
 
-                    {/* Submit */}
                     <button
                         type="submit"
                         disabled={loading}
@@ -158,14 +166,15 @@ function AdminLogin({ onLogin }) {
     );
 }
 
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ── MAIN ADMIN DASHBOARD ──────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AdminPage() {
     const { user, loading: authLoading, login, logout } = useAuth();
 
-    // Auth gate: show login if not signed in or not the admin
-    const isAdmin = user?.email === ADMIN_EMAIL;
+    // Case-insensitive match so capitalisation differences don't block access
+    const isAdmin = user?.email?.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase();
 
     // ── Data state ─────────────────────────────────────────────────────────────
     const [tab, setTab] = useState('products');
@@ -356,8 +365,27 @@ export default function AdminPage() {
         );
     }
 
-    // RENDER: Login screen if not admin
-    if (!user || !isAdmin) {
+    // RENDER: Signed in but not the admin account
+    if (user && !isAdmin) {
+        return (
+            <div style={{ minHeight: '100dvh', background: '#0f1117', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+                <div style={{ background: '#1a1d27', borderRadius: 20, padding: '32px 24px', maxWidth: 380, width: '100%', textAlign: 'center', border: '1px solid #2a2d3a' }}>
+                    <div style={{ fontSize: 48, marginBottom: 12 }}>🔒</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Not the admin account</div>
+                    <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 6 }}>You are signed in as:</div>
+                    <div style={{ fontSize: 14, color: '#f59e0b', fontWeight: 600, marginBottom: 20, wordBreak: 'break-all' }}>{user.email}</div>
+                    <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 20 }}>Admin access requires:<br /><strong style={{ color: '#10b981' }}>{ADMIN_EMAIL}</strong></div>
+                    <button onClick={logout} style={{ width: '100%', padding: '12px', background: '#10b981', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 10 }}>
+                        Sign out &amp; use admin account
+                    </button>
+                    <a href="/" style={{ fontSize: 13, color: '#6b7280', textDecoration: 'none' }}>← Back to shop</a>
+                </div>
+            </div>
+        );
+    }
+
+    // RENDER: Not signed in → show login
+    if (!user) {
         return <AdminLogin onLogin={login} />;
     }
 
@@ -867,6 +895,11 @@ const ls = {
         border: '2px solid rgba(255,255,255,0.3)',
         borderTop: '2px solid #fff', borderRadius: '50%',
         animation: 'spin 0.7s linear infinite',
+    },
+    infoBox: {
+        background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)',
+        borderRadius: 10, padding: '12px 14px', color: '#93c5fd', fontSize: 13,
+        marginBottom: 20, textAlign: 'left', lineHeight: 1.4,
     },
     hint: { fontSize: 12, color: '#4b5563', marginBottom: 16 },
     backLink: { fontSize: 13, color: '#6b7280', textDecoration: 'none', display: 'inline-block' },
