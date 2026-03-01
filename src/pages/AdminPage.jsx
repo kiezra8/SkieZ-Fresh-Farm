@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
     adminFetchAllProducts, adminUpdateProduct,
@@ -7,8 +6,15 @@ import {
     uploadProductImage, adminFetchStats,
     adminFetchAllOrders, adminUpdateOrderStatus,
 } from '../lib/adminService';
+import {
+    addFinanceRecord, deleteFinanceRecord,
+    fetchFinanceRecords, fetchFinanceStats,
+    fetchDailyRevenue, fetchWeeklyRevenue,
+    fetchMonthlyRevenue, fetchTopProducts,
+} from '../lib/financeService';
 
 const ADMIN_EMAIL = 'israelezrakisakye@gmail.com';
+
 const CATEGORY_SLUGS = [
     'vegetables', 'fruits', 'grains', 'oils', 'legumes', 'flours', 'spices', 'dairy', 'pasta', 'sugar'
 ];
@@ -25,21 +31,144 @@ const STATUS_NEXT = {
     pending: 'confirmed', confirmed: 'preparing', preparing: 'dispatched',
     dispatched: 'delivered', delivered: 'delivered', cancelled: 'cancelled',
 };
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n) => `UGX ${Number(n).toLocaleString()}`;
-
-// ─── Blank product template ───────────────────────────────────────────────────
 const BLANK = {
     name: '', category: 'vegetables', unit: 'Per 1 kg', price: '', original_price: '',
     discount: '0', rating: '5.0', reviews: '0', image: '', description: '', stock: '0', badge: '',
 };
 
-export default function AdminPage() {
-    const { user, loading, logout } = useAuth();
-    const navigate = useNavigate();
+// ─────────────────────────────────────────────────────────────────────────────
+// ── LOGIN SCREEN ──────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+function AdminLogin({ onLogin }) {
+    const [email, setEmail] = useState(ADMIN_EMAIL);
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [showPw, setShowPw] = useState(false);
 
-    const [tab, setTab] = useState('products'); // 'products' | 'orders'
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        if (!email || !password) { setError('Enter your email and password.'); return; }
+        setLoading(true);
+        const { error: err } = await onLogin(email, password);
+        setLoading(false);
+        if (err) {
+            if (err.message?.includes('Invalid login')) setError('Wrong password. Try again.');
+            else if (err.message?.includes('Email not confirmed')) setError('Please confirm your email first.');
+            else setError(err.message || 'Sign in failed. Check your details.');
+        }
+    };
+
+    return (
+        <div style={ls.root}>
+            {/* Background blobs */}
+            <div style={ls.blob1} />
+            <div style={ls.blob2} />
+
+            <div style={ls.card}>
+                {/* Logo */}
+                <div style={ls.logo}>
+                    <svg width="52" height="52" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="#1a7a3c" />
+                                <stop offset="100%" stopColor="#0d4a22" />
+                            </linearGradient>
+                        </defs>
+                        <rect width="512" height="512" rx="100" fill="url(#bg2)" />
+                        <path d="M160 280 L352 280 L330 370 Q326 390 306 390 L206 390 Q186 390 182 370 Z" fill="none" stroke="white" strokeWidth="22" strokeLinejoin="round" />
+                        <path d="M200 280 Q200 210 256 210 Q312 210 312 280" fill="none" stroke="white" strokeWidth="22" strokeLinecap="round" />
+                        <line x1="256" y1="180" x2="256" y2="130" stroke="white" strokeWidth="14" strokeLinecap="round" />
+                        <path d="M256 130 Q230 100 215 75 Q240 68 260 90 Q290 68 300 85 Q278 100 256 130 Z" fill="white" />
+                        <circle cx="340" cy="175" r="18" fill="#f4a261" />
+                    </svg>
+                </div>
+                <div style={ls.appName}>SkieZ Fresh Farm</div>
+                <div style={ls.subtitle}>Admin Panel</div>
+
+                <form onSubmit={handleSubmit} style={ls.form}>
+                    {/* Email */}
+                    <div style={ls.fieldWrap}>
+                        <label style={ls.label}>Email Address</label>
+                        <input
+                            type="email"
+                            value={email}
+                            onChange={e => setEmail(e.target.value)}
+                            placeholder="admin@example.com"
+                            autoComplete="email"
+                            style={ls.input}
+                            required
+                        />
+                    </div>
+
+                    {/* Password */}
+                    <div style={ls.fieldWrap}>
+                        <label style={ls.label}>Password</label>
+                        <div style={ls.pwWrap}>
+                            <input
+                                type={showPw ? 'text' : 'password'}
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
+                                placeholder="Your password"
+                                autoComplete="current-password"
+                                style={{ ...ls.input, paddingRight: 46 }}
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPw(v => !v)}
+                                style={ls.eyeBtn}
+                                tabIndex={-1}
+                            >
+                                {showPw ? '🙈' : '👁️'}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Error */}
+                    {error && (
+                        <div style={ls.errorBox}>
+                            ⚠️ {error}
+                        </div>
+                    )}
+
+                    {/* Submit */}
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        style={{ ...ls.submitBtn, opacity: loading ? 0.7 : 1 }}
+                    >
+                        {loading ? (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+                                <span style={ls.spinnerSmall} /> Signing in...
+                            </span>
+                        ) : '🔐 Sign In to Admin'}
+                    </button>
+                </form>
+
+                <p style={ls.hint}>
+                    Only accessible to authorised administrators.
+                </p>
+
+                <a href="/" style={ls.backLink}>← Back to shop</a>
+            </div>
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ── MAIN ADMIN DASHBOARD ──────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+export default function AdminPage() {
+    const { user, loading: authLoading, login, logout } = useAuth();
+
+    // Auth gate: show login if not signed in or not the admin
+    const isAdmin = user?.email === ADMIN_EMAIL;
+
+    // ── Data state ─────────────────────────────────────────────────────────────
+    const [tab, setTab] = useState('products');
     const [products, setProducts] = useState([]);
     const [orders, setOrders] = useState([]);
     const [stats, setStats] = useState({});
@@ -47,9 +176,9 @@ export default function AdminPage() {
     const [search, setSearch] = useState('');
     const [dataLoading, setDataLoading] = useState(true);
 
-    // Edit / add drawer
+    // Edit drawer state
     const [drawerOpen, setDrawerOpen] = useState(false);
-    const [editProduct, setEditProduct] = useState(null); // null = new
+    const [editProduct, setEditProduct] = useState(null);
     const [form, setForm] = useState(BLANK);
     const [imgPreview, setImgPreview] = useState('');
     const [uploading, setUploading] = useState(false);
@@ -58,43 +187,81 @@ export default function AdminPage() {
     const [confirmDelete, setConfirmDelete] = useState(null);
     const fileInputRef = useRef();
 
-    // ── Auth gate ──────────────────────────────────────────────────────────────
-    useEffect(() => {
-        if (!loading && (!user || user.email !== ADMIN_EMAIL)) {
-            navigate('/account');
-        }
-    }, [user, loading, navigate]);
+    // ── Finance state ──────────────────────────────────────────────────────────
+    const [finStats, setFinStats] = useState({});
+    const [finRecords, setFinRecords] = useState([]);
+    const [chartMode, setChartMode] = useState('daily');
+    const [chartData, setChartData] = useState([]);
+    const [topProducts, setTopProducts] = useState([]);
+    const [finLoading, setFinLoading] = useState(false);
+    const [finForm, setFinForm] = useState({
+        record_date: new Date().toISOString().split('T')[0],
+        product_name: '', category: 'vegetables', quantity: '1',
+        unit_price: '', payment_method: 'cash', notes: '',
+    });
+    const [finSaving, setFinSaving] = useState(false);
+    const [showFinForm, setShowFinForm] = useState(false);
 
     // ── Load data ──────────────────────────────────────────────────────────────
     const loadAll = useCallback(async () => {
         setDataLoading(true);
-        const [pRes, oRes, sRes] = await Promise.all([
-            adminFetchAllProducts(),
-            adminFetchAllOrders(),
-            adminFetchStats(),
-        ]);
-        if (pRes.data) setProducts(pRes.data);
-        if (oRes.data) setOrders(oRes.data);
-        setStats(sRes);
-        setDataLoading(false);
+        try {
+            const [pRes, oRes, sRes] = await Promise.all([
+                adminFetchAllProducts(),
+                adminFetchAllOrders(),
+                adminFetchStats(),
+            ]);
+            if (pRes.data) setProducts(pRes.data);
+            if (oRes.data) setOrders(oRes.data);
+            setStats(sRes);
+        } catch (e) {
+            console.error('Admin load error:', e);
+        } finally {
+            setDataLoading(false);
+        }
     }, []);
 
-    useEffect(() => { if (user?.email === ADMIN_EMAIL) loadAll(); }, [user, loadAll]);
+    // ── Load finance data ──────────────────────────────────────────────────────
+    const loadFinance = useCallback(async () => {
+        setFinLoading(true);
+        try {
+            const [sRes, rRes, topRes] = await Promise.all([
+                fetchFinanceStats(),
+                fetchFinanceRecords({ days: 90 }),
+                fetchTopProducts(8),
+            ]);
+            setFinStats(sRes);
+            if (rRes.data) setFinRecords(rRes.data);
+            if (topRes.data) setTopProducts(topRes.data);
+        } catch (e) { console.error('Finance load error:', e); }
+        finally { setFinLoading(false); }
+    }, []);
 
-    // ── Toast helper ──────────────────────────────────────────────────────────
+    const loadChart = useCallback(async (mode) => {
+        let res;
+        if (mode === 'daily') res = await fetchDailyRevenue(30);
+        else if (mode === 'weekly') res = await fetchWeeklyRevenue(12);
+        else res = await fetchMonthlyRevenue(12);
+        if (res?.data) setChartData(res.data);
+    }, []);
+
+    useEffect(() => { if (isAdmin) loadFinance(); }, [isAdmin, loadFinance]);
+    useEffect(() => { if (isAdmin && tab === 'finance') loadChart(chartMode); }, [isAdmin, tab, chartMode, loadChart]);
+
+    useEffect(() => {
+        if (isAdmin) loadAll();
+    }, [isAdmin, loadAll]);
+
+    // ── Toast ─────────────────────────────────────────────────────────────────
     const showToast = (msg, type = 'success') => {
         setToast({ msg, type });
         setTimeout(() => setToast(null), 3000);
     };
 
-    // ── Open drawer ───────────────────────────────────────────────────────────
+    // ── Drawer helpers ────────────────────────────────────────────────────────
     const openNew = () => {
-        setEditProduct(null);
-        setForm(BLANK);
-        setImgPreview('');
-        setDrawerOpen(true);
+        setEditProduct(null); setForm(BLANK); setImgPreview(''); setDrawerOpen(true);
     };
-
     const openEdit = (p) => {
         setEditProduct(p);
         setForm({
@@ -108,50 +275,39 @@ export default function AdminPage() {
         setImgPreview(p.image ?? '');
         setDrawerOpen(true);
     };
-
     const closeDrawer = () => { setDrawerOpen(false); setEditProduct(null); };
-
-    // ── Field change ──────────────────────────────────────────────────────────
     const setField = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
-    // ── Image upload from phone ───────────────────────────────────────────────
+    // ── Image upload ──────────────────────────────────────────────────────────
     const handleImageFile = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        // Local preview immediately
-        const localUrl = URL.createObjectURL(file);
-        setImgPreview(localUrl);
+        setImgPreview(URL.createObjectURL(file));
         setUploading(true);
         const productId = editProduct?.id ?? `new_${Date.now()}`;
         const { url, error } = await uploadProductImage(file, productId);
         setUploading(false);
         if (error) { showToast('Upload failed: ' + error.message, 'error'); return; }
-        setField('image', url);
-        setImgPreview(url);
+        setField('image', url); setImgPreview(url);
         showToast('Image uploaded ✓');
     };
 
     // ── Save product ──────────────────────────────────────────────────────────
     const handleSave = async () => {
-        if (!form.name || !form.price) {
+        if (!form.name.trim() || !form.price) {
             showToast('Name and price are required', 'error'); return;
         }
         setSaving(true);
         const payload = {
-            name: form.name.trim(),
-            category: form.category,
-            unit: form.unit.trim(),
-            price: Number(form.price),
+            name: form.name.trim(), category: form.category,
+            unit: form.unit.trim(), price: Number(form.price),
             original_price: form.original_price ? Number(form.original_price) : null,
             discount: Number(form.discount) || 0,
             rating: parseFloat(form.rating) || 5.0,
             reviews: Number(form.reviews) || 0,
-            image: form.image,
-            description: form.description.trim(),
-            stock: Number(form.stock) || 0,
-            badge: form.badge.trim(),
+            image: form.image, description: form.description.trim(),
+            stock: Number(form.stock) || 0, badge: form.badge.trim(),
         };
-
         let error;
         if (editProduct) {
             const res = await adminUpdateProduct(editProduct.id, payload);
@@ -162,216 +318,198 @@ export default function AdminPage() {
             error = res.error;
             if (!error && res.data) setProducts(ps => [...ps, res.data]);
         }
-
         setSaving(false);
         if (error) { showToast('Save failed: ' + error.message, 'error'); }
         else { showToast(editProduct ? 'Product updated ✓' : 'Product added ✓'); closeDrawer(); }
     };
 
-    // ── Delete product ────────────────────────────────────────────────────────
+    // ── Delete ────────────────────────────────────────────────────────────────
     const handleDelete = async (id) => {
         const { error } = await adminDeleteProduct(id);
         if (error) { showToast('Delete failed', 'error'); }
-        else {
-            setProducts(ps => ps.filter(p => p.id !== id));
-            showToast('Product deleted');
-            if (drawerOpen) closeDrawer();
-        }
+        else { setProducts(ps => ps.filter(p => p.id !== id)); showToast('Product deleted'); closeDrawer(); }
         setConfirmDelete(null);
     };
 
-    // ── Order status advance ──────────────────────────────────────────────────
+    // ── Order status ──────────────────────────────────────────────────────────
     const handleStatusChange = async (orderId, newStatus) => {
         const { error } = await adminUpdateOrderStatus(orderId, newStatus);
         if (!error) setOrders(os => os.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-        else showToast('Status update failed', 'error');
+        else showToast('Update failed', 'error');
     };
 
     // ── Filtered products ─────────────────────────────────────────────────────
     const filtered = products.filter(p => {
-        const matchCat = filterCat === 'all' || p.category === filterCat;
+        const inCat = filterCat === 'all' || p.category === filterCat;
         const q = search.toLowerCase();
-        const matchSearch = !q || p.name.toLowerCase().includes(q) || p.category.includes(q);
-        return matchCat && matchSearch;
+        const inSearch = !q || p.name.toLowerCase().includes(q) || (p.badge || '').toLowerCase().includes(q);
+        return inCat && inSearch;
     });
 
-    if (loading || !user) return null;
+    // ─────────────────────────────────────────────────────────────────────────
+    // RENDER: Loading spinner while auth resolves
+    if (authLoading) {
+        return (
+            <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f1117' }}>
+                <div style={ds.spinner} />
+            </div>
+        );
+    }
+
+    // RENDER: Login screen if not admin
+    if (!user || !isAdmin) {
+        return <AdminLogin onLogin={login} />;
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // RENDER: Full Admin Dashboard
     return (
-        <div style={styles.root}>
-            {/* ── Top Bar ── */}
-            <div style={styles.topBar}>
-                <div style={styles.topLeft}>
-                    <span style={styles.topLogo}>⚙️</span>
+        <div style={ds.root}>
+            {/* Top Bar */}
+            <div style={ds.topBar}>
+                <div style={ds.topLeft}>
+                    <svg width="32" height="32" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" style={{ borderRadius: 6 }}>
+                        <rect width="512" height="512" fill="#1a7a3c" />
+                        <path d="M160 280 L352 280 L330 370 Q326 390 306 390 L206 390 Q186 390 182 370 Z" fill="none" stroke="white" strokeWidth="28" strokeLinejoin="round" />
+                        <path d="M200 280 Q200 210 256 210 Q312 210 312 280" fill="none" stroke="white" strokeWidth="28" strokeLinecap="round" />
+                        <path d="M256 130 Q230 100 215 75 Q240 68 260 90 Q290 68 300 85 Q278 100 256 130 Z" fill="white" />
+                        <circle cx="340" cy="175" r="18" fill="#f4a261" />
+                    </svg>
                     <div>
-                        <div style={styles.topTitle}>Admin Panel</div>
-                        <div style={styles.topSub}>SkieZ Fresh Farm</div>
+                        <div style={ds.topTitle}>Admin Panel</div>
+                        <div style={ds.topSub}>{user.email}</div>
                     </div>
                 </div>
-                <button onClick={logout} style={styles.logoutBtn}>Sign Out</button>
+                <button onClick={logout} style={ds.logoutBtn}>Sign Out</button>
             </div>
 
-            {/* ── Stats Bar ── */}
-            <div style={styles.statsBar}>
+            {/* Stats Bar */}
+            <div style={ds.statsBar}>
                 {[
                     { label: 'Products', value: stats.productCount ?? '—', icon: '🥦' },
                     { label: 'Orders', value: stats.orderCount ?? '—', icon: '📦' },
                     { label: 'Pending', value: stats.pendingCount ?? '—', icon: '⏳' },
                 ].map(s => (
-                    <div key={s.label} style={styles.statCard}>
-                        <div style={styles.statIcon}>{s.icon}</div>
-                        <div style={styles.statVal}>{s.value}</div>
-                        <div style={styles.statLabel}>{s.label}</div>
+                    <div key={s.label} style={ds.statCard}>
+                        <div style={ds.statIcon}>{s.icon}</div>
+                        <div style={ds.statVal}>{s.value}</div>
+                        <div style={ds.statLabel}>{s.label}</div>
                     </div>
                 ))}
             </div>
 
-            {/* ── Tab Bar ── */}
-            <div style={styles.tabBar}>
-                {['products', 'orders'].map(t => (
-                    <button
-                        key={t}
-                        onClick={() => setTab(t)}
-                        style={{ ...styles.tabBtn, ...(tab === t ? styles.tabActive : {}) }}
-                    >
-                        {t === 'products' ? '🥦 Products' : '📦 Orders'}
+            {/* Tab Bar */}
+            <div style={ds.tabBar}>
+                {[
+                    { key: 'products', label: '🥦 Products' },
+                    { key: 'orders', label: '📦 Orders' },
+                    { key: 'finance', label: '💰 Finance' },
+                ].map(t => (
+                    <button key={t.key} onClick={() => setTab(t.key)}
+                        style={{ ...ds.tabBtn, ...(tab === t.key ? ds.tabActive : {}) }}>
+                        {t.label}
                     </button>
                 ))}
             </div>
 
-            {/* ══════════ PRODUCTS TAB ══════════ */}
+            {/* ═══ PRODUCTS TAB ═══ */}
             {tab === 'products' && (
-                <div style={styles.tabContent}>
-                    {/* Search */}
+                <div style={ds.tabContent}>
                     <input
                         placeholder="🔍  Search products..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        style={styles.searchInput}
+                        style={ds.searchInput}
                     />
-
-                    {/* Category filter chips */}
-                    <div style={styles.chips}>
-                        <button
-                            onClick={() => setFilterCat('all')}
-                            style={{ ...styles.chip, ...(filterCat === 'all' ? styles.chipActive : {}) }}
-                        >All</button>
-                        {CATEGORY_SLUGS.map(slug => (
-                            <button
-                                key={slug}
-                                onClick={() => setFilterCat(slug)}
-                                style={{ ...styles.chip, ...(filterCat === slug ? styles.chipActive : {}) }}
-                            >{CATEGORY_LABELS[slug]}</button>
+                    {/* Category chips */}
+                    <div style={ds.chips}>
+                        {['all', ...CATEGORY_SLUGS].map(slug => (
+                            <button key={slug} onClick={() => setFilterCat(slug)}
+                                style={{ ...ds.chip, ...(filterCat === slug ? ds.chipActive : {}) }}>
+                                {slug === 'all' ? 'All' : CATEGORY_LABELS[slug]}
+                            </button>
                         ))}
                     </div>
-
-                    {/* Product count */}
-                    <div style={styles.countRow}>
-                        <span style={styles.countText}>{filtered.length} product{filtered.length !== 1 ? 's' : ''}</span>
-                        <button onClick={loadAll} style={styles.refreshBtn}>↻ Refresh</button>
+                    <div style={ds.countRow}>
+                        <span style={ds.countText}>{filtered.length} product{filtered.length !== 1 ? 's' : ''}</span>
+                        <button onClick={loadAll} style={ds.refreshBtn}>↻ Refresh</button>
                     </div>
-
-                    {/* Product List */}
                     {dataLoading ? (
-                        <div style={styles.center}><div style={styles.spinner} /></div>
+                        <div style={ds.center}><div style={ds.spinner} /></div>
                     ) : (
-                        <div style={styles.productList}>
+                        <div style={ds.productList}>
                             {filtered.map(p => (
-                                <div key={p.id} style={styles.productRow} onClick={() => openEdit(p)}>
+                                <div key={p.id} style={ds.productRow} onClick={() => openEdit(p)}>
                                     <img
-                                        src={p.image || 'https://via.placeholder.com/60'}
+                                        src={p.image || 'https://via.placeholder.com/56'}
                                         alt={p.name}
-                                        style={styles.productThumb}
-                                        onError={e => e.target.src = 'https://via.placeholder.com/60'}
+                                        style={ds.productThumb}
+                                        onError={e => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/56'; }}
                                     />
-                                    <div style={styles.productInfo}>
-                                        <div style={styles.productName}>{p.name}</div>
-                                        <div style={styles.productMeta}>
-                                            <span style={styles.catChip}>{CATEGORY_LABELS[p.category] || p.category}</span>
-                                            <span style={styles.priceText}>{fmt(p.price)}</span>
+                                    <div style={ds.productInfo}>
+                                        <div style={ds.productName}>{p.name}</div>
+                                        <div style={ds.productMeta}>
+                                            <span style={ds.catChip}>{CATEGORY_LABELS[p.category] || p.category}</span>
+                                            <span style={ds.priceText}>{fmt(p.price)}</span>
                                         </div>
-                                        <div style={styles.stockRow}>
+                                        <div style={ds.stockRow}>
                                             <span style={{ color: p.stock > 10 ? '#10b981' : '#ef4444', fontSize: 12 }}>
                                                 {p.stock > 0 ? `Stock: ${p.stock}` : '⚠️ Out of stock'}
                                             </span>
-                                            {p.badge && <span style={styles.badge}>{p.badge}</span>}
+                                            {p.badge && <span style={ds.badge}>{p.badge}</span>}
                                         </div>
                                     </div>
-                                    <div style={styles.editArrow}>›</div>
+                                    <div style={ds.editArrow}>›</div>
                                 </div>
                             ))}
                         </div>
                     )}
-
-                    {/* FAB Add button */}
-                    <button onClick={openNew} style={styles.fab}>＋</button>
+                    <button onClick={openNew} style={ds.fab} aria-label="Add product">＋</button>
                 </div>
             )}
 
-            {/* ══════════ ORDERS TAB ══════════ */}
+            {/* ═══ ORDERS TAB ═══ */}
             {tab === 'orders' && (
-                <div style={styles.tabContent}>
-                    <div style={styles.countRow}>
-                        <span style={styles.countText}>{orders.length} order{orders.length !== 1 ? 's' : ''}</span>
-                        <button onClick={loadAll} style={styles.refreshBtn}>↻ Refresh</button>
+                <div style={ds.tabContent}>
+                    <div style={ds.countRow}>
+                        <span style={ds.countText}>{orders.length} order{orders.length !== 1 ? 's' : ''}</span>
+                        <button onClick={loadAll} style={ds.refreshBtn}>↻ Refresh</button>
                     </div>
                     {dataLoading ? (
-                        <div style={styles.center}><div style={styles.spinner} /></div>
+                        <div style={ds.center}><div style={ds.spinner} /></div>
                     ) : orders.length === 0 ? (
-                        <div style={styles.empty}>No orders yet</div>
+                        <div style={ds.empty}>No orders yet 📭</div>
                     ) : (
-                        <div style={styles.orderList}>
+                        <div style={ds.orderList}>
                             {orders.map(o => (
-                                <div key={o.id} style={styles.orderCard}>
-                                    <div style={styles.orderTop}>
+                                <div key={o.id} style={ds.orderCard}>
+                                    <div style={ds.orderTop}>
                                         <div>
-                                            <div style={styles.orderName}>{o.delivery_name}</div>
-                                            <div style={styles.orderSub}>{o.delivery_phone}</div>
-                                            <div style={styles.orderSub}>
-                                                {new Date(o.created_at).toLocaleDateString('en-UG', {
-                                                    day: 'numeric', month: 'short', year: 'numeric',
-                                                    hour: '2-digit', minute: '2-digit'
-                                                })}
-                                            </div>
+                                            <div style={ds.orderName}>{o.delivery_name}</div>
+                                            <div style={ds.orderSub}>{o.delivery_phone}</div>
+                                            <div style={ds.orderSub}>{new Date(o.created_at).toLocaleDateString('en-UG', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
                                         </div>
                                         <div style={{ textAlign: 'right' }}>
-                                            <div style={styles.orderTotal}>{fmt(o.total_amount)}</div>
-                                            <span style={{ ...styles.statusBadge, background: STATUS_COLORS[o.status] }}>
-                                                {o.status}
-                                            </span>
+                                            <div style={ds.orderTotal}>{fmt(o.total_amount)}</div>
+                                            <span style={{ ...ds.statusBadge, background: STATUS_COLORS[o.status] }}>{o.status}</span>
                                         </div>
                                     </div>
-
-                                    {/* Items summary */}
-                                    <div style={styles.orderItems}>
+                                    <div style={ds.orderItems}>
                                         {(o.order_items || []).map(item => (
-                                            <div key={item.id} style={styles.orderItem}>
-                                                {item.image && <img src={item.image} alt="" style={styles.orderItemImg} />}
-                                                <span style={styles.orderItemText}>
-                                                    {item.name} ×{item.quantity}
-                                                </span>
+                                            <div key={item.id} style={ds.orderItem}>
+                                                {item.image && <img src={item.image} alt="" style={ds.orderItemImg} onError={e => e.target.style.display = 'none'} />}
+                                                <span style={ds.orderItemText}>{item.name} ×{item.quantity}</span>
                                             </div>
                                         ))}
                                     </div>
-
-                                    {/* Address */}
-                                    <div style={styles.orderAddr}>📍 {o.delivery_address}</div>
-
-                                    {/* Status advance */}
+                                    <div style={ds.orderAddr}>📍 {o.delivery_address}</div>
                                     {o.status !== 'delivered' && o.status !== 'cancelled' && (
-                                        <button
-                                            onClick={() => handleStatusChange(o.id, STATUS_NEXT[o.status])}
-                                            style={styles.advanceBtn}
-                                        >
+                                        <button onClick={() => handleStatusChange(o.id, STATUS_NEXT[o.status])} style={ds.advanceBtn}>
                                             Mark as {STATUS_NEXT[o.status]} →
                                         </button>
                                     )}
                                     {o.status === 'pending' && (
-                                        <button
-                                            onClick={() => handleStatusChange(o.id, 'cancelled')}
-                                            style={styles.cancelOrderBtn}
-                                        >Cancel order</button>
+                                        <button onClick={() => handleStatusChange(o.id, 'cancelled')} style={ds.cancelOrderBtn}>Cancel order</button>
                                     )}
                                 </div>
                             ))}
@@ -380,56 +518,215 @@ export default function AdminPage() {
                 </div>
             )}
 
-            {/* ══════════ EDIT / ADD DRAWER ══════════ */}
-            {drawerOpen && (
-                <div style={styles.drawerOverlay} onClick={closeDrawer}>
-                    <div style={styles.drawer} onClick={e => e.stopPropagation()}>
-                        {/* Drawer header */}
-                        <div style={styles.drawerHeader}>
-                            <span style={styles.drawerTitle}>
-                                {editProduct ? '✏️ Edit Product' : '➕ New Product'}
-                            </span>
-                            <button onClick={closeDrawer} style={styles.drawerClose}>✕</button>
-                        </div>
+            {/* ═══ FINANCE TAB ═══ */}
+            {tab === 'finance' && (
+                <div style={ds.tabContent}>
+                    {/* Stat Cards */}
+                    <div style={fn.statsRow}>
+                        {[
+                            { label: "Today", val: finStats.today ?? 0, sub: `${finStats.txToday ?? 0} sales`, color: '#10b981' },
+                            { label: "This Week", val: finStats.thisWeek ?? 0, sub: `${finStats.txWeek ?? 0} sales`, color: '#3b82f6' },
+                            { label: "This Month", val: finStats.thisMonth ?? 0, sub: `${finStats.txMonth ?? 0} sales`, color: '#f59e0b' },
+                        ].map(s => (
+                            <div key={s.label} style={{ ...fn.statCard, borderTop: `3px solid ${s.color}` }}>
+                                <div style={fn.statLabel}>{s.label}</div>
+                                <div style={{ ...fn.statVal, color: s.color }}>UGX {Number(s.val).toLocaleString()}</div>
+                                <div style={fn.statSub}>{s.sub}</div>
+                            </div>
+                        ))}
+                    </div>
 
-                        <div style={styles.drawerBody}>
-                            {/* ── Image section ── */}
-                            <div style={styles.imgSection}>
-                                <div style={styles.imgPreviewBox}>
-                                    {imgPreview ? (
-                                        <img src={imgPreview} alt="preview" style={styles.imgPreview} />
-                                    ) : (
-                                        <div style={styles.imgPlaceholder}>📷<br />No Image</div>
-                                    )}
-                                    {uploading && <div style={styles.imgOverlay}><div style={styles.spinner} /></div>}
+                    {/* Add Record Toggle */}
+                    <div style={fn.addToggleRow}>
+                        <span style={fn.sectionTitle}>💰 Revenue Tracking</span>
+                        <button onClick={() => setShowFinForm(v => !v)} style={fn.addToggleBtn}>
+                            {showFinForm ? '✕ Cancel' : '＋ Add Record'}
+                        </button>
+                    </div>
+
+                    {/* Add Record Form */}
+                    {showFinForm && (
+                        <div style={fn.formCard}>
+                            <div style={fn.formGrid}>
+                                <div style={fn.fieldG}>
+                                    <label style={fn.flabel}>Date</label>
+                                    <input type="date" value={finForm.record_date}
+                                        onChange={e => setFinForm(f => ({ ...f, record_date: e.target.value }))}
+                                        style={fn.finput} />
                                 </div>
-                                <div style={styles.imgButtons}>
-                                    {/* Upload from phone */}
-                                    <button
-                                        onClick={() => fileInputRef.current?.click()}
-                                        style={styles.imgUploadBtn}
-                                        disabled={uploading}
-                                    >
+                                <div style={fn.fieldG}>
+                                    <label style={fn.flabel}>Product / Item</label>
+                                    <input type="text" value={finForm.product_name} placeholder="e.g. Fresh Tomatoes"
+                                        onChange={e => setFinForm(f => ({ ...f, product_name: e.target.value }))}
+                                        style={fn.finput} />
+                                </div>
+                                <div style={fn.fieldG}>
+                                    <label style={fn.flabel}>Category</label>
+                                    <select value={finForm.category}
+                                        onChange={e => setFinForm(f => ({ ...f, category: e.target.value }))}
+                                        style={fn.finput}>
+                                        {CATEGORY_SLUGS.map(s => <option key={s} value={s}>{CATEGORY_LABELS[s]}</option>)}
+                                    </select>
+                                </div>
+                                <div style={fn.fieldG}>
+                                    <label style={fn.flabel}>Qty</label>
+                                    <input type="number" inputMode="numeric" value={finForm.quantity}
+                                        onChange={e => setFinForm(f => ({ ...f, quantity: e.target.value }))}
+                                        style={fn.finput} min="0.1" step="0.1" />
+                                </div>
+                                <div style={fn.fieldG}>
+                                    <label style={fn.flabel}>Unit Price (UGX)</label>
+                                    <input type="number" inputMode="numeric" value={finForm.unit_price} placeholder="2500"
+                                        onChange={e => setFinForm(f => ({ ...f, unit_price: e.target.value }))}
+                                        style={fn.finput} min="0" />
+                                </div>
+                                <div style={fn.fieldG}>
+                                    <label style={fn.flabel}>Total (auto)</label>
+                                    <div style={{ ...fn.finput, background: '#0a0d12', display: 'flex', alignItems: 'center', color: '#10b981', fontWeight: 700 }}>
+                                        UGX {((Number(finForm.quantity) || 0) * (Number(finForm.unit_price) || 0)).toLocaleString()}
+                                    </div>
+                                </div>
+                                <div style={fn.fieldG}>
+                                    <label style={fn.flabel}>Payment</label>
+                                    <select value={finForm.payment_method}
+                                        onChange={e => setFinForm(f => ({ ...f, payment_method: e.target.value }))}
+                                        style={fn.finput}>
+                                        <option value="cash">Cash</option>
+                                        <option value="mobile_money">Mobile Money</option>
+                                        <option value="bank_transfer">Bank Transfer</option>
+                                        <option value="credit">Credit</option>
+                                    </select>
+                                </div>
+                                <div style={fn.fieldG}>
+                                    <label style={fn.flabel}>Notes</label>
+                                    <input type="text" value={finForm.notes} placeholder="Optional note"
+                                        onChange={e => setFinForm(f => ({ ...f, notes: e.target.value }))}
+                                        style={fn.finput} />
+                                </div>
+                            </div>
+                            <button disabled={finSaving} style={{ ...fn.saveRecordBtn, opacity: finSaving ? 0.7 : 1 }}
+                                onClick={async () => {
+                                    if (!finForm.product_name || !finForm.unit_price) {
+                                        showToast('Product name and price are required', 'error'); return;
+                                    }
+                                    setFinSaving(true);
+                                    const total = Math.round((Number(finForm.quantity) || 1) * (Number(finForm.unit_price) || 0));
+                                    const { error } = await addFinanceRecord({
+                                        ...finForm,
+                                        quantity: Number(finForm.quantity) || 1,
+                                        unit_price: Number(finForm.unit_price),
+                                        total_amount: total,
+                                    });
+                                    setFinSaving(false);
+                                    if (error) { showToast('Save failed: ' + error.message, 'error'); }
+                                    else {
+                                        showToast('Record saved ✓');
+                                        setShowFinForm(false);
+                                        setFinForm({ record_date: new Date().toISOString().split('T')[0], product_name: '', category: 'vegetables', quantity: '1', unit_price: '', payment_method: 'cash', notes: '' });
+                                        loadFinance(); loadChart(chartMode);
+                                    }
+                                }}>
+                                {finSaving ? '💾 Saving...' : '💾 Save Record'}
+                            </button>
+                        </div>
+                    )}
+
+                    {/* ── CHART ── */}
+                    <div style={fn.chartCard}>
+                        <div style={fn.chartHeader}>
+                            <span style={fn.sectionTitle}>📈 Revenue Chart</span>
+                            <div style={fn.chartTabs}>
+                                {['daily', 'weekly', 'monthly'].map(m => (
+                                    <button key={m} onClick={() => setChartMode(m)}
+                                        style={{ ...fn.chartTab, ...(chartMode === m ? fn.chartTabActive : {}) }}>
+                                        {m[0].toUpperCase() + m.slice(1)}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        {finLoading
+                            ? <div style={ds.center}><div style={ds.spinner} /></div>
+                            : <FinanceLineChart data={chartData} />
+                        }
+                    </div>
+
+                    {/* ── TOP PRODUCTS ── */}
+                    {topProducts.length > 0 && (
+                        <div style={fn.chartCard}>
+                            <div style={fn.chartHeader}>
+                                <span style={fn.sectionTitle}>🏆 Top Products</span>
+                                <span style={fn.countText}>{topProducts.length} items</span>
+                            </div>
+                            <TopProductsBars data={topProducts} />
+                        </div>
+                    )}
+
+                    {/* ── HISTORY ── */}
+                    <div style={fn.histSection}>
+                        <div style={fn.addToggleRow}>
+                            <span style={fn.sectionTitle}>📋 Transaction History</span>
+                            <button onClick={() => { loadFinance(); loadChart(chartMode); }} style={ds.refreshBtn}>↻ Refresh</button>
+                        </div>
+                        {finLoading ? <div style={ds.center}><div style={ds.spinner} /></div> :
+                            finRecords.length === 0 ? <div style={ds.empty}>No records yet. Add your first sale above! 💰</div> :
+                                finRecords.map(r => (
+                                    <div key={r.id} style={fn.histRow}>
+                                        <div style={fn.histLeft}>
+                                            <div style={fn.histProduct}>{r.product_name}</div>
+                                            <div style={fn.histMeta}>
+                                                {new Date(r.record_date).toLocaleDateString('en-UG', { day: 'numeric', month: 'short', year: 'numeric' })} ·
+                                                {' '}{r.quantity} units · {r.payment_method}
+                                            </div>
+                                        </div>
+                                        <div style={fn.histRight}>
+                                            <div style={fn.histAmt}>UGX {Number(r.total_amount).toLocaleString()}</div>
+                                            <button onClick={async () => {
+                                                if (!confirm('Delete this record?')) return;
+                                                await deleteFinanceRecord(r.id);
+                                                loadFinance(); loadChart(chartMode);
+                                                showToast('Record deleted');
+                                            }} style={fn.histDel}>🗑️</button>
+                                        </div>
+                                    </div>
+                                ))}
+                    </div>
+                </div>
+            )}
+
+            {/* ═══ EDIT / ADD DRAWER ═══ */}
+            {drawerOpen && (
+                <div style={ds.drawerOverlay} onClick={closeDrawer}>
+                    <div style={ds.drawer} onClick={e => e.stopPropagation()}>
+                        <div style={ds.drawerHeader}>
+                            <span style={ds.drawerTitle}>{editProduct ? '✏️ Edit Product' : '➕ New Product'}</span>
+                            <button onClick={closeDrawer} style={ds.drawerClose}>✕</button>
+                        </div>
+                        <div style={ds.drawerBody}>
+                            {/* Image section */}
+                            <div style={ds.imgSection}>
+                                <div style={ds.imgPreviewBox}>
+                                    {imgPreview
+                                        ? <img src={imgPreview} alt="preview" style={ds.imgPreview} onError={e => e.target.style.display = 'none'} />
+                                        : <div style={ds.imgPlaceholder}>📷<br />No Image</div>
+                                    }
+                                    {uploading && <div style={ds.imgOverlay}><div style={ds.spinner} /></div>}
+                                </div>
+                                <div style={ds.imgButtons}>
+                                    <button onClick={() => fileInputRef.current?.click()} style={ds.imgUploadBtn} disabled={uploading}>
                                         📷 {uploading ? 'Uploading...' : 'Upload Photo'}
                                     </button>
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept="image/*"
-                                        style={{ display: 'none' }}
-                                        onChange={handleImageFile}
-                                    />
-                                    <span style={styles.orText}>or paste URL below</span>
+                                    <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageFile} />
+                                    <span style={ds.orText}>or paste URL below</span>
                                     <input
                                         value={form.image}
                                         onChange={e => { setField('image', e.target.value); setImgPreview(e.target.value); }}
                                         placeholder="https://..."
-                                        style={styles.urlInput}
+                                        style={ds.urlInput}
                                     />
                                 </div>
                             </div>
 
-                            {/* ── Fields ── */}
+                            {/* Fields */}
                             {[
                                 { label: 'Product Name *', key: 'name', type: 'text', placeholder: 'e.g. Fresh Tomatoes' },
                                 { label: 'Unit', key: 'unit', type: 'text', placeholder: 'e.g. Per 1 kg' },
@@ -439,27 +736,23 @@ export default function AdminPage() {
                                 { label: 'Stock', key: 'stock', type: 'number', placeholder: 'e.g. 50' },
                                 { label: 'Badge', key: 'badge', type: 'text', placeholder: 'e.g. Organic, Best Seller' },
                             ].map(({ label, key, type, placeholder }) => (
-                                <div key={key} style={styles.fieldGroup}>
-                                    <label style={styles.fieldLabel}>{label}</label>
+                                <div key={key} style={ds.fieldGroup}>
+                                    <label style={ds.fieldLabel}>{label}</label>
                                     <input
                                         type={type}
                                         inputMode={type === 'number' ? 'numeric' : 'text'}
                                         value={form[key]}
                                         onChange={e => setField(key, e.target.value)}
                                         placeholder={placeholder}
-                                        style={styles.fieldInput}
+                                        style={ds.fieldInput}
                                     />
                                 </div>
                             ))}
 
-                            {/* Category select */}
-                            <div style={styles.fieldGroup}>
-                                <label style={styles.fieldLabel}>Category</label>
-                                <select
-                                    value={form.category}
-                                    onChange={e => setField('category', e.target.value)}
-                                    style={styles.fieldInput}
-                                >
+                            {/* Category */}
+                            <div style={ds.fieldGroup}>
+                                <label style={ds.fieldLabel}>Category</label>
+                                <select value={form.category} onChange={e => setField('category', e.target.value)} style={ds.fieldInput}>
                                     {CATEGORY_SLUGS.map(slug => (
                                         <option key={slug} value={slug}>{CATEGORY_LABELS[slug]}</option>
                                     ))}
@@ -467,31 +760,24 @@ export default function AdminPage() {
                             </div>
 
                             {/* Description */}
-                            <div style={styles.fieldGroup}>
-                                <label style={styles.fieldLabel}>Description</label>
+                            <div style={ds.fieldGroup}>
+                                <label style={ds.fieldLabel}>Description</label>
                                 <textarea
                                     value={form.description}
                                     onChange={e => setField('description', e.target.value)}
                                     placeholder="Describe this product..."
                                     rows={5}
-                                    style={{ ...styles.fieldInput, resize: 'vertical', minHeight: 100 }}
+                                    style={{ ...ds.fieldInput, resize: 'vertical', minHeight: 100 }}
                                 />
                             </div>
 
                             {/* Actions */}
-                            <div style={styles.drawerActions}>
-                                <button
-                                    onClick={handleSave}
-                                    disabled={saving || uploading}
-                                    style={styles.saveBtn}
-                                >
+                            <div style={ds.drawerActions}>
+                                <button onClick={handleSave} disabled={saving || uploading} style={{ ...ds.saveBtn, opacity: (saving || uploading) ? 0.7 : 1 }}>
                                     {saving ? '💾 Saving...' : editProduct ? '💾 Save Changes' : '➕ Add Product'}
                                 </button>
                                 {editProduct && (
-                                    <button
-                                        onClick={() => setConfirmDelete(editProduct.id)}
-                                        style={styles.deleteBtn}
-                                    >🗑️ Delete</button>
+                                    <button onClick={() => setConfirmDelete(editProduct.id)} style={ds.deleteBtn}>🗑️</button>
                                 )}
                             </div>
                         </div>
@@ -499,22 +785,22 @@ export default function AdminPage() {
                 </div>
             )}
 
-            {/* ══════════ DELETE CONFIRM ══════════ */}
+            {/* ═══ DELETE CONFIRM ═══ */}
             {confirmDelete && (
-                <div style={styles.drawerOverlay}>
-                    <div style={styles.confirmBox}>
-                        <div style={styles.confirmText}>Delete this product permanently?</div>
-                        <div style={styles.confirmBtns}>
-                            <button onClick={() => handleDelete(confirmDelete)} style={styles.confirmYes}>Yes, Delete</button>
-                            <button onClick={() => setConfirmDelete(null)} style={styles.confirmNo}>Cancel</button>
+                <div style={ds.drawerOverlay}>
+                    <div style={ds.confirmBox}>
+                        <div style={ds.confirmText}>Delete this product permanently?</div>
+                        <div style={ds.confirmBtns}>
+                            <button onClick={() => handleDelete(confirmDelete)} style={ds.confirmYes}>Yes, Delete</button>
+                            <button onClick={() => setConfirmDelete(null)} style={ds.confirmNo}>Cancel</button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* ══════════ TOAST ══════════ */}
+            {/* ═══ TOAST ═══ */}
             {toast && (
-                <div style={{ ...styles.toast, background: toast.type === 'error' ? '#ef4444' : '#10b981' }}>
+                <div style={{ ...ds.toast, background: toast.type === 'error' ? '#ef4444' : '#10b981' }}>
                     {toast.msg}
                 </div>
             )}
@@ -523,237 +809,164 @@ export default function AdminPage() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Styles — fully mobile-first
+// Login Page Styles
 // ─────────────────────────────────────────────────────────────────────────────
-const styles = {
+const ls = {
     root: {
-        minHeight: '100dvh', background: '#0f1117', color: '#f0f0f0',
-        fontFamily: "'Inter', system-ui, sans-serif",
-        paddingBottom: 80,
+        minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: '#0a0d14', fontFamily: "'Inter', system-ui, sans-serif",
+        padding: 20, position: 'relative', overflow: 'hidden',
     },
-    topBar: {
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 16px', background: '#1a1d27',
-        borderBottom: '1px solid #2a2d3a', position: 'sticky', top: 0, zIndex: 100,
+    blob1: {
+        position: 'absolute', width: 400, height: 400, borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(16,185,129,0.15) 0%, transparent 70%)',
+        top: -100, right: -100, pointerEvents: 'none',
     },
-    topLeft: { display: 'flex', alignItems: 'center', gap: 10 },
-    topLogo: { fontSize: 26 },
-    topTitle: { fontWeight: 700, fontSize: 17, color: '#fff' },
-    topSub: { fontSize: 11, color: '#6b7280' },
-    logoutBtn: {
-        background: 'transparent', border: '1px solid #374151', color: '#9ca3af',
-        borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer',
+    blob2: {
+        position: 'absolute', width: 300, height: 300, borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(45,158,71,0.12) 0%, transparent 70%)',
+        bottom: -80, left: -80, pointerEvents: 'none',
     },
+    card: {
+        width: '100%', maxWidth: 400, background: '#141820',
+        borderRadius: 24, padding: '36px 28px',
+        border: '1px solid rgba(255,255,255,0.08)',
+        boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+        position: 'relative', zIndex: 1, textAlign: 'center',
+    },
+    logo: { display: 'flex', justifyContent: 'center', marginBottom: 14 },
+    appName: { fontFamily: "'Outfit', sans-serif", fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: -0.5 },
+    subtitle: { fontSize: 13, color: '#10b981', fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 28, marginTop: 4 },
+    form: { textAlign: 'left', marginBottom: 20 },
+    fieldWrap: { marginBottom: 16 },
+    label: { display: 'block', fontSize: 12, color: '#9ca3af', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
+    input: {
+        width: '100%', boxSizing: 'border-box', padding: '13px 16px',
+        background: '#1e2330', border: '1.5px solid #2a2f3e', borderRadius: 12,
+        color: '#f0f0f0', fontSize: 15, outline: 'none', fontFamily: 'inherit',
+        transition: 'border-color .2s',
+    },
+    pwWrap: { position: 'relative' },
+    eyeBtn: {
+        position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+        background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: 4,
+    },
+    errorBox: {
+        background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
+        borderRadius: 10, padding: '10px 14px', color: '#f87171', fontSize: 13,
+        marginBottom: 14,
+    },
+    submitBtn: {
+        width: '100%', padding: '15px', background: 'linear-gradient(135deg, #10b981, #059669)',
+        border: 'none', borderRadius: 12, color: '#fff', fontWeight: 700, fontSize: 15,
+        cursor: 'pointer', transition: 'opacity .2s', fontFamily: 'inherit',
+        boxShadow: '0 4px 20px rgba(16,185,129,0.35)',
+    },
+    spinnerSmall: {
+        display: 'inline-block', width: 16, height: 16,
+        border: '2px solid rgba(255,255,255,0.3)',
+        borderTop: '2px solid #fff', borderRadius: '50%',
+        animation: 'spin 0.7s linear infinite',
+    },
+    hint: { fontSize: 12, color: '#4b5563', marginBottom: 16 },
+    backLink: { fontSize: 13, color: '#6b7280', textDecoration: 'none', display: 'inline-block' },
+};
 
-    statsBar: {
-        display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1,
-        background: '#2a2d3a', margin: '0 0 1px',
-    },
-    statCard: {
-        background: '#1a1d27', padding: '14px 8px', textAlign: 'center',
-    },
+// ─────────────────────────────────────────────────────────────────────────────
+// Dashboard Styles
+// ─────────────────────────────────────────────────────────────────────────────
+const ds = {
+    root: { minHeight: '100dvh', background: '#0f1117', color: '#f0f0f0', fontFamily: "'Inter', system-ui, sans-serif", paddingBottom: 80 },
+    topBar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: '#1a1d27', borderBottom: '1px solid #2a2d3a', position: 'sticky', top: 0, zIndex: 100 },
+    topLeft: { display: 'flex', alignItems: 'center', gap: 10 },
+    topTitle: { fontWeight: 700, fontSize: 17, color: '#fff' },
+    topSub: { fontSize: 11, color: '#6b7280', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+    logoutBtn: { background: 'transparent', border: '1px solid #374151', color: '#9ca3af', borderRadius: 8, padding: '6px 14px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' },
+
+    statsBar: { display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1, background: '#2a2d3a', margin: '0 0 1px' },
+    statCard: { background: '#1a1d27', padding: '14px 8px', textAlign: 'center' },
     statIcon: { fontSize: 20 },
     statVal: { fontSize: 22, fontWeight: 700, color: '#fff', lineHeight: 1.2 },
     statLabel: { fontSize: 11, color: '#6b7280', marginTop: 2 },
 
-    tabBar: {
-        display: 'flex', background: '#1a1d27',
-        borderBottom: '2px solid #2a2d3a',
-    },
-    tabBtn: {
-        flex: 1, padding: '12px 0', background: 'transparent', border: 'none',
-        color: '#6b7280', fontSize: 14, fontWeight: 500, cursor: 'pointer',
-        transition: 'color .2s',
-    },
-    tabActive: {
-        color: '#10b981', borderBottom: '2px solid #10b981', marginBottom: -2,
-    },
+    tabBar: { display: 'flex', background: '#1a1d27', borderBottom: '2px solid #2a2d3a' },
+    tabBtn: { flex: 1, padding: '12px 0', background: 'transparent', border: 'none', color: '#6b7280', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' },
+    tabActive: { color: '#10b981', borderBottom: '2px solid #10b981', marginBottom: -2 },
 
     tabContent: { padding: '0 0 16px' },
 
-    searchInput: {
-        width: '100%', boxSizing: 'border-box',
-        padding: '12px 16px', background: '#1a1d27', border: 'none',
-        borderBottom: '1px solid #2a2d3a', color: '#f0f0f0',
-        fontSize: 14, outline: 'none',
-    },
-    chips: {
-        display: 'flex', gap: 8, padding: '10px 12px', overflowX: 'auto',
-        scrollbarWidth: 'none', borderBottom: '1px solid #2a2d3a',
-    },
-    chip: {
-        flexShrink: 0, padding: '5px 12px', borderRadius: 20,
-        background: '#2a2d3a', border: 'none', color: '#9ca3af',
-        fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap',
-    },
+    searchInput: { width: '100%', boxSizing: 'border-box', padding: '12px 16px', background: '#1a1d27', border: 'none', borderBottom: '1px solid #2a2d3a', color: '#f0f0f0', fontSize: 14, outline: 'none', fontFamily: 'inherit' },
+    chips: { display: 'flex', gap: 8, padding: '10px 12px', overflowX: 'auto', scrollbarWidth: 'none', borderBottom: '1px solid #2a2d3a' },
+    chip: { flexShrink: 0, padding: '5px 12px', borderRadius: 20, background: '#2a2d3a', border: 'none', color: '#9ca3af', fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' },
     chipActive: { background: '#10b981', color: '#fff' },
 
-    countRow: {
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '8px 16px',
-    },
+    countRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px' },
     countText: { fontSize: 12, color: '#6b7280' },
-    refreshBtn: {
-        background: 'transparent', border: 'none', color: '#10b981',
-        fontSize: 12, cursor: 'pointer',
-    },
+    refreshBtn: { background: 'transparent', border: 'none', color: '#10b981', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' },
 
     productList: { display: 'flex', flexDirection: 'column' },
-    productRow: {
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '12px 16px', borderBottom: '1px solid #1e2130',
-        cursor: 'pointer', transition: 'background .15s',
-        background: '#0f1117',
-    },
-    productThumb: {
-        width: 56, height: 56, borderRadius: 10, objectFit: 'cover',
-        flexShrink: 0, background: '#2a2d3a',
-    },
+    productRow: { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: '1px solid #1e2130', cursor: 'pointer', background: '#0f1117', transition: 'background .15s' },
+    productThumb: { width: 56, height: 56, borderRadius: 10, objectFit: 'cover', flexShrink: 0, background: '#2a2d3a' },
     productInfo: { flex: 1, minWidth: 0 },
     productName: { fontWeight: 600, fontSize: 14, color: '#f0f0f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
     productMeta: { display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 },
-    catChip: {
-        fontSize: 10, padding: '2px 7px', background: '#2a2d3a',
-        borderRadius: 10, color: '#9ca3af',
-    },
+    catChip: { fontSize: 10, padding: '2px 7px', background: '#2a2d3a', borderRadius: 10, color: '#9ca3af' },
     priceText: { fontSize: 13, fontWeight: 600, color: '#10b981' },
     stockRow: { display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 },
-    badge: {
-        fontSize: 10, padding: '2px 7px', background: '#facc15',
-        color: '#000', borderRadius: 10, fontWeight: 600,
-    },
+    badge: { fontSize: 10, padding: '2px 7px', background: '#facc15', color: '#000', borderRadius: 10, fontWeight: 600 },
     editArrow: { fontSize: 22, color: '#374151', flexShrink: 0 },
 
-    fab: {
-        position: 'fixed', bottom: 24, right: 20, width: 54, height: 54,
-        borderRadius: 27, background: '#10b981', color: '#fff',
-        border: 'none', fontSize: 28, lineHeight: '54px', textAlign: 'center',
-        boxShadow: '0 4px 20px rgba(16,185,129,.5)', cursor: 'pointer', zIndex: 50,
-    },
+    fab: { position: 'fixed', bottom: 24, right: 20, width: 54, height: 54, borderRadius: 27, background: '#10b981', color: '#fff', border: 'none', fontSize: 28, lineHeight: '54px', textAlign: 'center', boxShadow: '0 4px 20px rgba(16,185,129,.5)', cursor: 'pointer', zIndex: 50, fontFamily: 'inherit' },
 
     orderList: { display: 'flex', flexDirection: 'column', gap: 12, padding: 12 },
-    orderCard: {
-        background: '#1a1d27', borderRadius: 14, padding: 16,
-        border: '1px solid #2a2d3a',
-    },
+    orderCard: { background: '#1a1d27', borderRadius: 14, padding: 16, border: '1px solid #2a2d3a' },
     orderTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
     orderName: { fontWeight: 700, fontSize: 15, color: '#fff' },
     orderSub: { fontSize: 12, color: '#6b7280', marginTop: 2 },
     orderTotal: { fontWeight: 700, fontSize: 16, color: '#10b981' },
-    statusBadge: {
-        display: 'inline-block', marginTop: 4, padding: '3px 10px', borderRadius: 12,
-        fontSize: 11, fontWeight: 600, color: '#fff', textTransform: 'capitalize',
-    },
+    statusBadge: { display: 'inline-block', marginTop: 4, padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600, color: '#fff', textTransform: 'capitalize' },
     orderItems: { display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 },
     orderItem: { display: 'flex', alignItems: 'center', gap: 8 },
     orderItemImg: { width: 30, height: 30, borderRadius: 6, objectFit: 'cover' },
     orderItemText: { fontSize: 13, color: '#d1d5db' },
     orderAddr: { fontSize: 12, color: '#6b7280', marginBottom: 10 },
-    advanceBtn: {
-        width: '100%', padding: '10px', background: '#10b981', border: 'none',
-        borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer',
-        marginBottom: 6,
-    },
-    cancelOrderBtn: {
-        width: '100%', padding: '8px', background: 'transparent',
-        border: '1px solid #ef4444', borderRadius: 8, color: '#ef4444',
-        fontSize: 13, cursor: 'pointer',
-    },
+    advanceBtn: { width: '100%', padding: '10px', background: '#10b981', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', marginBottom: 6, fontFamily: 'inherit' },
+    cancelOrderBtn: { width: '100%', padding: '8px', background: 'transparent', border: '1px solid #ef4444', borderRadius: 8, color: '#ef4444', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' },
 
-    // ── Drawer ──
-    drawerOverlay: {
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)',
-        zIndex: 200, display: 'flex', alignItems: 'flex-end',
-    },
-    drawer: {
-        width: '100%', maxHeight: '92dvh', background: '#1a1d27',
-        borderRadius: '20px 20px 0 0', display: 'flex', flexDirection: 'column',
-        overflow: 'hidden',
-    },
-    drawerHeader: {
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '16px 20px', borderBottom: '1px solid #2a2d3a', flexShrink: 0,
-    },
+    drawerOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.75)', zIndex: 200, display: 'flex', alignItems: 'flex-end' },
+    drawer: { width: '100%', maxHeight: '92dvh', background: '#1a1d27', borderRadius: '20px 20px 0 0', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
+    drawerHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #2a2d3a', flexShrink: 0 },
     drawerTitle: { fontWeight: 700, fontSize: 17, color: '#fff' },
-    drawerClose: {
-        background: 'transparent', border: 'none', color: '#9ca3af',
-        fontSize: 20, cursor: 'pointer', padding: '0 4px',
-    },
+    drawerClose: { background: 'transparent', border: 'none', color: '#9ca3af', fontSize: 20, cursor: 'pointer', padding: '0 4px', fontFamily: 'inherit' },
     drawerBody: { overflowY: 'auto', padding: '16px 20px', flex: 1 },
 
     imgSection: { display: 'flex', gap: 16, marginBottom: 20, alignItems: 'flex-start' },
-    imgPreviewBox: {
-        width: 90, height: 90, borderRadius: 12, background: '#2a2d3a',
-        flexShrink: 0, overflow: 'hidden', position: 'relative',
-    },
+    imgPreviewBox: { width: 90, height: 90, borderRadius: 12, background: '#2a2d3a', flexShrink: 0, overflow: 'hidden', position: 'relative' },
     imgPreview: { width: '100%', height: '100%', objectFit: 'cover' },
-    imgPlaceholder: {
-        width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        color: '#4b5563', fontSize: 11, textAlign: 'center',
-    },
-    imgOverlay: {
-        position: 'absolute', inset: 0, background: 'rgba(0,0,0,.6)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-    },
+    imgPlaceholder: { width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#4b5563', fontSize: 11, textAlign: 'center' },
+    imgOverlay: { position: 'absolute', inset: 0, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
     imgButtons: { flex: 1, display: 'flex', flexDirection: 'column', gap: 8 },
-    imgUploadBtn: {
-        padding: '10px 14px', background: '#10b981', border: 'none', borderRadius: 8,
-        color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer',
-    },
+    imgUploadBtn: { padding: '10px 14px', background: '#10b981', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' },
     orText: { fontSize: 11, color: '#6b7280' },
-    urlInput: {
-        width: '100%', boxSizing: 'border-box', padding: '8px 12px',
-        background: '#0f1117', border: '1px solid #374151', borderRadius: 8,
-        color: '#f0f0f0', fontSize: 12, outline: 'none',
-    },
+    urlInput: { width: '100%', boxSizing: 'border-box', padding: '8px 12px', background: '#0f1117', border: '1px solid #374151', borderRadius: 8, color: '#f0f0f0', fontSize: 12, outline: 'none', fontFamily: 'inherit' },
 
     fieldGroup: { marginBottom: 14 },
     fieldLabel: { display: 'block', fontSize: 12, color: '#9ca3af', marginBottom: 5, fontWeight: 500 },
-    fieldInput: {
-        width: '100%', boxSizing: 'border-box', padding: '11px 14px',
-        background: '#0f1117', border: '1px solid #374151', borderRadius: 10,
-        color: '#f0f0f0', fontSize: 14, outline: 'none', fontFamily: 'inherit',
-    },
+    fieldInput: { width: '100%', boxSizing: 'border-box', padding: '11px 14px', background: '#0f1117', border: '1px solid #374151', borderRadius: 10, color: '#f0f0f0', fontSize: 14, outline: 'none', fontFamily: 'inherit' },
 
     drawerActions: { display: 'flex', gap: 10, marginTop: 8 },
-    saveBtn: {
-        flex: 1, padding: '14px', background: '#10b981', border: 'none',
-        borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer',
-    },
-    deleteBtn: {
-        padding: '14px 18px', background: 'transparent', border: '1px solid #ef4444',
-        borderRadius: 10, color: '#ef4444', fontWeight: 600, fontSize: 14, cursor: 'pointer',
-    },
+    saveBtn: { flex: 1, padding: '14px', background: '#10b981', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' },
+    deleteBtn: { padding: '14px 18px', background: 'transparent', border: '1px solid #ef4444', borderRadius: 10, color: '#ef4444', fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' },
 
-    // ── Confirm ──
-    confirmBox: {
-        background: '#1a1d27', borderRadius: 16, padding: 24,
-        margin: 'auto 20px', width: 'calc(100% - 40px)', boxSizing: 'border-box',
-    },
+    confirmBox: { background: '#1a1d27', borderRadius: 16, padding: 24, margin: 'auto 20px', width: 'calc(100% - 40px)', boxSizing: 'border-box' },
     confirmText: { fontSize: 16, color: '#fff', fontWeight: 600, textAlign: 'center', marginBottom: 20 },
     confirmBtns: { display: 'flex', gap: 10 },
-    confirmYes: {
-        flex: 1, padding: 12, background: '#ef4444', border: 'none',
-        borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer',
-    },
-    confirmNo: {
-        flex: 1, padding: 12, background: '#2a2d3a', border: 'none',
-        borderRadius: 10, color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer',
-    },
+    confirmYes: { flex: 1, padding: 12, background: '#ef4444', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' },
+    confirmNo: { flex: 1, padding: 12, background: '#2a2d3a', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' },
 
-    toast: {
-        position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)',
-        padding: '12px 24px', borderRadius: 12, color: '#fff',
-        fontWeight: 600, fontSize: 14, zIndex: 999, whiteSpace: 'nowrap',
-        boxShadow: '0 4px 20px rgba(0,0,0,.4)',
-    },
+    toast: { position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)', padding: '12px 24px', borderRadius: 12, color: '#fff', fontWeight: 600, fontSize: 14, zIndex: 999, whiteSpace: 'nowrap', boxShadow: '0 4px 20px rgba(0,0,0,.4)' },
 
     center: { display: 'flex', justifyContent: 'center', padding: 40 },
     empty: { textAlign: 'center', color: '#4b5563', padding: 40, fontSize: 15 },
-    spinner: {
-        width: 32, height: 32, border: '3px solid #2a2d3a',
-        borderTop: '3px solid #10b981', borderRadius: '50%',
-        animation: 'spin 0.8s linear infinite',
-    },
+    spinner: { width: 32, height: 32, border: '3px solid #2a2d3a', borderTop: '3px solid #10b981', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
 };

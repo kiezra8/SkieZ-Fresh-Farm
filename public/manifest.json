@@ -1,0 +1,35 @@
+{
+    "name": "SkieZ Fresh Farm",
+    "short_name": "SkieZ Farm",
+    "description": "Fresh groceries & dry foods delivered to your door in Uganda",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0f1117",
+    "theme_color": "#2d9e47",
+    "orientation": "portrait-primary",
+    "categories": [
+        "food",
+        "shopping"
+    ],
+    "icons": [
+        {
+            "src": "/icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "Shop Now",
+            "url": "/products",
+            "description": "Browse all products"
+        },
+        {
+            "name": "Admin Panel",
+            "url": "/admin",
+            "description": "Manage products and orders"
+        }
+    ]
+}

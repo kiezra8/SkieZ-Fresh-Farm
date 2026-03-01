@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a7a3c"/>
+      <stop offset="100%" style="stop-color:#0d4a22"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" rx="100" fill="url(#bg)"/>
+  <!-- Basket body -->
+  <path d="M160 280 L352 280 L330 370 Q326 390 306 390 L206 390 Q186 390 182 370 Z"
+        fill="none" stroke="white" stroke-width="22" stroke-linejoin="round"/>
+  <!-- Basket handle -->
+  <path d="M200 280 Q200 210 256 210 Q312 210 312 280"
+        fill="none" stroke="white" stroke-width="22" stroke-linecap="round"/>
+  <!-- Leaf stem -->
+  <line x1="256" y1="180" x2="256" y2="130" stroke="white" stroke-width="14" stroke-linecap="round"/>
+  <!-- Leaf -->
+  <path d="M256 130 Q230 100 215 75 Q240 68 260 90 Q290 68 300 85 Q278 100 256 130 Z"
+        fill="white"/>
+  <!-- Gold dot accent -->
+  <circle cx="340" cy="175" r="18" fill="#f4a261"/>
+</svg>
