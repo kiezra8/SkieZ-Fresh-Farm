@@ -51,17 +51,19 @@ export default function AccountPage({ onChatOpen }) {
         setTesting(true); clear();
         try {
             const res = await fetch('https://cqxcbsixzcyhkgwwtdbd.supabase.co/rest/v1/', {
-                headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || '' }
+                headers: { apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxeGNic2l4emN5aGtnd3d0ZGJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzMTQ3OTUsImV4cCI6MjA4Nzg5MDc5NX0.pWXL6j4Ak40FtWzPX4dBD6STpKvsyUYI5su8xW-7uHA' }
             });
             if (res.ok || res.status === 400 || res.status === 404) {
-                setSuccess('✅ Supabase is reachable! If login still fails, check your email and password.');
+                setSuccess('✅ Connected! Try signing in now.');
+            } else if (res.status === 401) {
+                setError('401 — API key rejected. Please restart the dev server:\nPress Ctrl+C in the terminal then run: npm run dev');
             } else if (res.status === 503) {
-                setError('Project is PAUSED (503).\nGo to supabase.com → your project → "Restore project".');
+                setError('Project is PAUSED. Go to supabase.com and click "Restore project".');
             } else {
                 setError(`Server replied ${res.status}. Check your Supabase dashboard.`);
             }
         } catch {
-            setError('Cannot connect to Supabase at all.\n\nCheck:\n1. Your internet is working\n2. Project is not paused at supabase.com\n3. Dev server restarted after .env change (Ctrl+C → npm run dev)');
+            setError('Cannot connect. Check your internet connection.');
         } finally { setTesting(false); }
     };
 
