@@ -194,7 +194,6 @@ export default function AdminPage() {
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState(null);
     const [confirmDelete, setConfirmDelete] = useState(null);
-    const [confirmDelete, setConfirmDelete] = useState(null);
     const fileInputRef = useRef();
 
     // ── Orders state ──────────────────────────────────────────────────────────
@@ -1112,6 +1111,61 @@ const ds = {
     toast: { position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)', padding: '12px 24px', borderRadius: 12, color: '#fff', fontWeight: 600, fontSize: 14, zIndex: 999, whiteSpace: 'nowrap', boxShadow: '0 4px 20px rgba(0,0,0,.4)' },
 
     center: { display: 'flex', justifyContent: 'center', padding: 40 },
-    empty: { textAlign: 'center', color: '#4b5563', padding: 40, fontSize: 15 },
     spinner: { width: 32, height: 32, border: '3px solid #2a2d3a', borderTop: '3px solid #10b981', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Custom Chart Components
+// ─────────────────────────────────────────────────────────────────────────────
+function FinanceLineChart({ data }) {
+    if (!data || data.length === 0) return <div style={ds.empty}>No data for this period</div>;
+
+    const maxAmt = Math.max(...data.map(d => Number(d.amount) || 0), 1);
+
+    return (
+        <div style={{ height: 250, display: 'flex', alignItems: 'flex-end', gap: 6, paddingTop: 40, overflowX: 'auto', paddingBottom: 10 }}>
+            {data.map((d, i) => {
+                const heightPct = ((Number(d.amount) || 0) / maxAmt) * 100;
+                return (
+                    <div key={i} style={{ flex: '1 0 30px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
+                        <div style={{ fontSize: 10, color: '#10b981', marginBottom: 6, opacity: heightPct > 0 ? 1 : 0, transform: 'rotate(-45deg)', transformOrigin: 'left bottom' }}>
+                            {Number(d.amount) > 0 ? (Number(d.amount) / 1000).toFixed(1) + 'k' : ''}
+                        </div>
+                        <div style={{ width: '100%', background: '#10b981', borderRadius: '4px 4px 0 0', height: `${Math.max(heightPct, 2)}%`, minHeight: 4, transition: 'height .3s' }} />
+                        <div style={{ fontSize: 10, color: '#6b7280', marginTop: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
+                            {d.label}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+function TopProductsBars({ data }) {
+    if (!data || data.length === 0) return <div style={ds.empty}>No products sold yet</div>;
+
+    const maxRev = Math.max(...data.map(d => d.total_revenue || 0), 1);
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 16 }}>
+            {data.map((d, i) => {
+                const pct = ((d.total_revenue || 0) / maxRev) * 100;
+                return (
+                    <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                            <span style={{ color: '#fff', fontWeight: 600 }}>{d.product_name}</span>
+                            <span style={{ color: '#10b981', fontWeight: 700 }}>UGX {Number(d.total_revenue || 0).toLocaleString()}</span>
+                        </div>
+                        <div style={{ width: '100%', height: 8, background: '#2a2d3a', borderRadius: 4, overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', background: 'linear-gradient(90deg, #10b981, #34d399)', borderRadius: 4 }} />
+                        </div>
+                        <div style={{ fontSize: 11, color: '#6b7280' }}>
+                            {d.total_qty} units sold
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
