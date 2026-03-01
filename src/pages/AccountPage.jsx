@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     FiUser, FiShoppingBag, FiMapPin, FiHeart,
     FiMessageCircle, FiStar, FiGift, FiLogOut,
@@ -13,6 +14,9 @@ const MODE = { SIGNIN: 'signin', SIGNUP: 'signup', PHONE: 'phone', RESET: 'reset
 
 export default function AccountPage({ onChatOpen }) {
     const { user, isAuthenticated, loading, login, register, logout } = useAuth();
+    const navigate = useNavigate();
+
+    const isAdmin = user?.email?.toLowerCase().trim() === 'israelezrakisakye@gmail.com';
 
     // Auth panel open/close (collapsed by default for guests)
     const [authOpen, setAuthOpen] = useState(false);
@@ -340,6 +344,20 @@ export default function AccountPage({ onChatOpen }) {
                                 )}
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* ── Admin Dashboard Access (admin only) ── */}
+                {isAdmin && (
+                    <div style={{ background: 'linear-gradient(135deg,#10b981,#059669)', borderRadius: 14, padding: '18px 20px', color: '#fff', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', textAlign: 'left', cursor: 'pointer', boxShadow: '0 4px 15px rgba(16,185,129,.3)' }} onClick={() => navigate('/admin')}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                            <span style={{ fontSize: 32 }}>⚙️</span>
+                            <div>
+                                <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 3 }}>Admin Dashboard</div>
+                                <div style={{ fontSize: 13, opacity: .9 }}>Manage products, orders, and finance</div>
+                            </div>
+                        </div>
+                        <FiChevronDown style={{ transform: 'rotate(-90deg)', fontSize: 24 }} />
                     </div>
                 )}
 
