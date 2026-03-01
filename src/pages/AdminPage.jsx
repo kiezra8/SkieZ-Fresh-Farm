@@ -1114,6 +1114,43 @@ const ds = {
     spinner: { width: 32, height: 32, border: '3px solid #2a2d3a', borderTop: '3px solid #10b981', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
 };
 
+const fn = {
+    statsRow: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24, padding: '0 16px' },
+    statCard: { background: '#1a1d27', padding: '16px', borderRadius: 12, border: '1px solid #2a2d3a' },
+    statLabel: { fontSize: 13, color: '#9ca3af', marginBottom: 6 },
+    statVal: { fontSize: 20, fontWeight: 800, marginBottom: 4 },
+    statSub: { fontSize: 12, color: '#6b7280' },
+
+    addToggleRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 16px', marginBottom: 16 },
+    sectionTitle: { fontSize: 16, fontWeight: 700, color: '#f0f0f0' },
+    addToggleBtn: { background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: 'none', padding: '8px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
+
+    formCard: { background: '#1a1d27', border: '1px solid #2a2d3a', borderRadius: 14, margin: '0 16px 24px', padding: 20 },
+    formGrid: { display: 'grid', gridTemplateColumns: '1fr', gap: 14, marginBottom: 20 },
+    fieldG: { display: 'flex', flexDirection: 'column', gap: 6 },
+    flabel: { fontSize: 12, color: '#9ca3af', fontWeight: 500 },
+    finput: { width: '100%', boxSizing: 'border-box', background: '#0f1117', border: '1px solid #374151', color: '#fff', padding: '10px 14px', borderRadius: 8, fontSize: 14, outline: 'none', fontFamily: 'inherit' },
+
+    saveRecordBtn: { width: '100%', background: '#10b981', color: '#fff', border: 'none', padding: '12px', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
+
+    chartCard: { background: '#1a1d27', border: '1px solid #2a2d3a', borderRadius: 14, margin: '0 16px 24px', padding: 20 },
+    chartHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+    chartTabs: { display: 'flex', background: '#0f1117', borderRadius: 20, padding: 2 },
+    chartTab: { background: 'transparent', border: 'none', color: '#6b7280', padding: '6px 14px', borderRadius: 18, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
+    chartTabActive: { background: '#2a2d3a', color: '#f0f0f0' },
+
+    countText: { fontSize: 13, color: '#10b981', fontWeight: 600 },
+
+    histSection: { margin: '0 16px 16px' },
+    histRow: { background: '#1a1d27', border: '1px solid #2a2d3a', borderRadius: 12, padding: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+    histLeft: { display: 'flex', flexDirection: 'column', gap: 4 },
+    histProduct: { fontSize: 15, fontWeight: 600, color: '#f0f0f0' },
+    histMeta: { fontSize: 12, color: '#9ca3af' },
+    histRight: { display: 'flex', alignItems: 'center', gap: 14 },
+    histAmt: { fontSize: 15, fontWeight: 700, color: '#10b981' },
+    histDel: { background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', padding: '6px 10px', borderRadius: 8, cursor: 'pointer', fontSize: 14 },
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Custom Chart Components
 // ─────────────────────────────────────────────────────────────────────────────
