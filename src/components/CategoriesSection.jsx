@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import { FiArrowRight } from 'react-icons/fi';
-import { categories } from '../data/products';
+import { useData } from '../context/DataContext';
 
 export default function CategoriesSection() {
     const navigate = useNavigate();
+    const { categories } = useData();
 
     return (
         <section className="categories-section">

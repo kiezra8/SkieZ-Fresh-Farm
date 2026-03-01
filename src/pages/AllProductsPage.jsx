@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
-import { products, categories } from '../data/products';
+import { useData } from '../context/DataContext';
 
 const sortOptions = [
     { label: 'Featured', value: 'featured' },
@@ -12,6 +12,7 @@ const sortOptions = [
 ];
 
 export default function AllProductsPage() {
+    const { products, categories, loading } = useData();
     const [searchParams, setSearchParams] = useSearchParams();
     const [sort, setSort] = useState('featured');
     const [search, setSearch] = useState('');
@@ -40,7 +41,15 @@ export default function AllProductsPage() {
 
     const catLabel = activeCategory === 'all'
         ? 'All Products'
-        : categories.find(c => c.slug === activeCategory)?.name || activeCategory;
+        : categories?.find(c => c.slug === activeCategory)?.name || activeCategory;
+
+    if (loading) {
+        return (
+            <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+                <div style={{ width: 40, height: 40, border: '4px solid #f3f3f3', borderTop: '4px solid #10b981', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            </div>
+        );
+    }
 
     return (
         <div className="page">

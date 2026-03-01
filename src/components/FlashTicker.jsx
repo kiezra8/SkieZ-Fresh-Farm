@@ -1,6 +1,8 @@
-import { tickerItems } from '../data/products';
+import { useData } from '../context/DataContext';
 
 export default function FlashTicker() {
+    const { tickerItems } = useData();
+    if (!tickerItems || tickerItems.length === 0) return null;
     const doubled = [...tickerItems, ...tickerItems];
 
     return (

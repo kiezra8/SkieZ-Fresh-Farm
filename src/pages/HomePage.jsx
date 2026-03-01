@@ -3,10 +3,20 @@ import { FiArrowRight } from 'react-icons/fi';
 import HeroBanner from '../components/HeroBanner';
 import CategoriesSection from '../components/CategoriesSection';
 import ProductCard from '../components/ProductCard';
-import { products } from '../data/products';
+import { useData } from '../context/DataContext';
 
 export default function HomePage() {
     const navigate = useNavigate();
+    const { products, loading } = useData();
+
+    if (loading) {
+        return (
+            <main className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+                <div style={{ width: 40, height: 40, border: '4px solid #f3f3f3', borderTop: '4px solid #10b981', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            </main>
+        );
+    }
+
     const featured = products.slice(0, 10);
     const freshPicks = products.filter(p => ['vegetables', 'fruits', 'dairy'].includes(p.category));
     const dryGoods = products.filter(p => ['grains', 'flours', 'legumes', 'oils', 'sugar', 'pasta', 'spices'].includes(p.category));

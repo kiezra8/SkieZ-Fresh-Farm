@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { FiArrowLeft, FiHeart, FiMinus, FiPlus } from 'react-icons/fi';
 import { useCart } from '../context/CartContext';
-import { products } from '../data/products';
+import { useData } from '../context/DataContext';
 
 function Stars({ rating }) {
     return (
@@ -18,9 +18,18 @@ export default function ProductDetailPage() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { addToCart } = useCart();
+    const { products, loading } = useData();
     const [qty, setQty] = useState(1);
     const [liked, setLiked] = useState(false);
     const [added, setAdded] = useState(false);
+
+    if (loading) {
+        return (
+            <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+                <div style={{ width: 40, height: 40, border: '4px solid #f3f3f3', borderTop: '4px solid #10b981', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            </div>
+        );
+    }
 
     const product = products.find(p => p.id === parseInt(id));
 
@@ -42,7 +51,7 @@ export default function ProductDetailPage() {
         setTimeout(() => setAdded(false), 2000);
     };
 
-    const savings = product.originalPrice ? (product.originalPrice - product.price) * qty : 0;
+    const savings = product.original_price ? (product.original_price - product.price) * qty : 0;
 
     return (
         <div className="page" style={{ paddingBottom: 100 }}>
@@ -119,9 +128,9 @@ export default function ProductDetailPage() {
                         <span style={{ fontSize: 28, fontWeight: 900, color: '#e63946' }}>
                             UGX {product.price.toLocaleString()}
                         </span>
-                        {product.originalPrice && (
+                        {product.original_price && (
                             <span style={{ fontSize: 16, color: '#bbb', textDecoration: 'line-through' }}>
-                                UGX {product.originalPrice.toLocaleString()}
+                                UGX {product.original_price.toLocaleString()}
                             </span>
                         )}
                     </div>

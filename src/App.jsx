@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
+import { DataProvider } from './context/DataContext';
 import Navbar from './components/Navbar';
 import CartDrawer from './components/CartDrawer';
 import ChatModal from './components/ChatModal';
@@ -49,8 +50,10 @@ function AppInner() {
 
 export default function App() {
     return (
-        <CartProvider>
-            <AppInner />
-        </CartProvider>
+        <DataProvider>
+            <CartProvider>
+                <AppInner />
+            </CartProvider>
+        </DataProvider>
     );
 }

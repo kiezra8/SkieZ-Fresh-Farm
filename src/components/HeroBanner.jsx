@@ -1,18 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { heroSlides } from '../data/products';
 import { FiChevronLeft, FiChevronRight, FiArrowRight } from 'react-icons/fi';
+import { useData } from '../context/DataContext';
 
 export default function HeroBanner() {
     const [current, setCurrent] = useState(0);
     const navigate = useNavigate();
+    const { heroSlides } = useData();
 
     useEffect(() => {
+        if (!heroSlides || heroSlides.length === 0) return;
         const timer = setInterval(() => {
             setCurrent(c => (c + 1) % heroSlides.length);
         }, 4500);
         return () => clearInterval(timer);
-    }, []);
+    }, [heroSlides]);
+
+    if (!heroSlides || heroSlides.length === 0) return null;
 
     const prev = () => setCurrent(c => (c - 1 + heroSlides.length) % heroSlides.length);
     const next = () => setCurrent(c => (c + 1) % heroSlides.length);

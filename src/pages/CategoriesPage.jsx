@@ -1,8 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import { categories } from '../data/products';
+import { useData } from '../context/DataContext';
 
 export default function CategoriesPage() {
     const navigate = useNavigate();
+    const { categories } = useData();
 
     return (
         <div className="page">
