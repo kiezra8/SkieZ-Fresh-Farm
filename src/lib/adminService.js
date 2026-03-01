@@ -126,6 +126,42 @@ export async function adminUpdateOrderStatus(orderId, status) {
     return { data, error };
 }
 
+export async function adminAddOrder(orderData, orderItemsData) {
+    // 1. Insert order
+    const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+            delivery_name: orderData.delivery_name,
+            delivery_phone: orderData.delivery_phone,
+            delivery_address: orderData.delivery_address,
+            total_amount: orderData.total_amount,
+            status: orderData.status || 'pending',
+            created_at: orderData.created_at || new Date().toISOString()
+        })
+        .select()
+        .single();
+
+    if (orderError) return { error: orderError };
+
+    // 2. Insert items
+    if (orderItemsData && orderItemsData.length > 0) {
+        const itemsToInsert = orderItemsData.map(item => ({
+            order_id: order.id,
+            name: item.name,
+            unit: item.unit || 'custom',
+            price: item.price || 0,
+            quantity: item.quantity || 1
+        }));
+        const { error: itemsError } = await supabase
+            .from('order_items')
+            .insert(itemsToInsert);
+
+        if (itemsError) return { error: itemsError };
+    }
+
+    return { data: order, error: null };
+}
+
 // ─── Stats ────────────────────────────────────────────────────────────────────
 export async function adminFetchStats() {
     const [products, orders, pending] = await Promise.all([

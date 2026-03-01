@@ -4,7 +4,7 @@ import {
     adminFetchAllProducts, adminUpdateProduct,
     adminAddProduct, adminDeleteProduct,
     uploadProductImage, adminFetchStats,
-    adminFetchAllOrders, adminUpdateOrderStatus,
+    adminFetchAllOrders, adminUpdateOrderStatus, adminAddOrder
 } from '../lib/adminService';
 import {
     addFinanceRecord, deleteFinanceRecord,
@@ -194,7 +194,16 @@ export default function AdminPage() {
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState(null);
     const [confirmDelete, setConfirmDelete] = useState(null);
+    const [confirmDelete, setConfirmDelete] = useState(null);
     const fileInputRef = useRef();
+
+    // ── Orders state ──────────────────────────────────────────────────────────
+    const [showOrderForm, setShowOrderForm] = useState(false);
+    const [orderForm, setOrderForm] = useState({
+        delivery_name: '', delivery_phone: '', delivery_address: '',
+        total_amount: '', items_desc: '', status: 'delivered', created_at: new Date().toISOString().split('T')[0]
+    });
+    const [orderSaving, setOrderSaving] = useState(false);
 
     // ── Finance state ──────────────────────────────────────────────────────────
     const [finStats, setFinStats] = useState({});
@@ -499,7 +508,107 @@ export default function AdminPage() {
             {/* ═══ ORDERS TAB ═══ */}
             {tab === 'orders' && (
                 <div style={ds.tabContent}>
-                    <div style={ds.countRow}>
+                    {/* Add Order Toggle */}
+                    <div style={{ ...fn.addToggleRow, marginBottom: 16 }}>
+                        <span style={fn.sectionTitle}>📦 Manage Orders</span>
+                        <button onClick={() => setShowOrderForm(v => !v)} style={fn.addToggleBtn}>
+                            {showOrderForm ? '✕ Cancel' : '＋ Add Manual Order'}
+                        </button>
+                    </div>
+
+                    {showOrderForm && (
+                        <div style={fn.formCard}>
+                            <div style={fn.formGrid}>
+                                <div style={fn.fieldG}>
+                                    <label style={fn.flabel}>Customer Name</label>
+                                    <input type="text" value={orderForm.delivery_name} placeholder="John Doe"
+                                        onChange={e => setOrderForm(f => ({ ...f, delivery_name: e.target.value }))}
+                                        style={fn.finput} />
+                                </div>
+                                <div style={fn.fieldG}>
+                                    <label style={fn.flabel}>Phone</label>
+                                    <input type="text" value={orderForm.delivery_phone} placeholder="07XX XXX XXX"
+                                        onChange={e => setOrderForm(f => ({ ...f, delivery_phone: e.target.value }))}
+                                        style={fn.finput} />
+                                </div>
+                                <div style={fn.fieldG}>
+                                    <label style={fn.flabel}>Address/Location</label>
+                                    <input type="text" value={orderForm.delivery_address} placeholder="Kampala"
+                                        onChange={e => setOrderForm(f => ({ ...f, delivery_address: e.target.value }))}
+                                        style={fn.finput} />
+                                </div>
+                                <div style={fn.fieldG}>
+                                    <label style={fn.flabel}>Items Description</label>
+                                    <input type="text" value={orderForm.items_desc} placeholder="E.g. 5kg Tomatoes, 1 Bag Potatoes"
+                                        onChange={e => setOrderForm(f => ({ ...f, items_desc: e.target.value }))}
+                                        style={fn.finput} />
+                                </div>
+                                <div style={fn.fieldG}>
+                                    <label style={fn.flabel}>Total Amount (UGX)</label>
+                                    <input type="number" inputMode="numeric" value={orderForm.total_amount} placeholder="15000"
+                                        onChange={e => setOrderForm(f => ({ ...f, total_amount: e.target.value }))}
+                                        style={fn.finput} min="0" />
+                                </div>
+                                <div style={fn.fieldG}>
+                                    <label style={fn.flabel}>Date</label>
+                                    <input type="date" value={orderForm.created_at}
+                                        onChange={e => setOrderForm(f => ({ ...f, created_at: e.target.value }))}
+                                        style={fn.finput} />
+                                </div>
+                                <div style={fn.fieldG}>
+                                    <label style={fn.flabel}>Status</label>
+                                    <select value={orderForm.status}
+                                        onChange={e => setOrderForm(f => ({ ...f, status: e.target.value }))}
+                                        style={fn.finput}>
+                                        <option value="pending">Pending</option>
+                                        <option value="confirmed">Confirmed</option>
+                                        <option value="preparing">Preparing</option>
+                                        <option value="dispatched">Dispatched</option>
+                                        <option value="delivered">Delivered</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button disabled={orderSaving} style={{ ...fn.saveRecordBtn, opacity: orderSaving ? 0.7 : 1 }}
+                                onClick={async () => {
+                                    if (!orderForm.delivery_name || !orderForm.total_amount) {
+                                        showToast('Name and total amount are required', 'error'); return;
+                                    }
+                                    setOrderSaving(true);
+
+                                    const dateObj = new Date(orderForm.created_at);
+                                    dateObj.setHours(new Date().getHours());
+                                    dateObj.setMinutes(new Date().getMinutes());
+
+                                    const orderData = {
+                                        delivery_name: orderForm.delivery_name,
+                                        delivery_phone: orderForm.delivery_phone || 'N/A',
+                                        delivery_address: orderForm.delivery_address || 'N/A',
+                                        total_amount: Number(orderForm.total_amount),
+                                        status: orderForm.status,
+                                        created_at: dateObj.toISOString()
+                                    };
+
+                                    const itemsData = orderForm.items_desc ? [
+                                        { name: orderForm.items_desc, unit: 'Manual Entry', price: Number(orderForm.total_amount), quantity: 1 }
+                                    ] : [];
+
+                                    const { error } = await adminAddOrder(orderData, itemsData);
+
+                                    setOrderSaving(false);
+                                    if (error) { showToast('Save failed: ' + error.message, 'error'); }
+                                    else {
+                                        showToast('Order added manually!');
+                                        setOrderForm({ delivery_name: '', delivery_phone: '', delivery_address: '', total_amount: '', items_desc: '', status: 'delivered', created_at: new Date().toISOString().split('T')[0] });
+                                        setShowOrderForm(false);
+                                        loadAll();
+                                    }
+                                }}>
+                                {orderSaving ? 'Saving...' : '＋ Save Manual Order'}
+                            </button>
+                        </div>
+                    )}
+
+                    <div style={{ ...ds.countRow, marginTop: 12 }}>
                         <span style={ds.countText}>{orders.length} order{orders.length !== 1 ? 's' : ''}</span>
                         <button onClick={loadAll} style={ds.refreshBtn}>↻ Refresh</button>
                     </div>
@@ -583,16 +692,17 @@ export default function AdminPage() {
                                         style={fn.finput} />
                                 </div>
                                 <div style={fn.fieldG}>
-                                    <label style={fn.flabel}>Product / Item</label>
-                                    <input type="text" value={finForm.product_name} placeholder="e.g. Fresh Tomatoes"
+                                    <label style={fn.flabel}>Product / Entry Name</label>
+                                    <input type="text" value={finForm.product_name} placeholder="e.g. Daily Sales Total"
                                         onChange={e => setFinForm(f => ({ ...f, product_name: e.target.value }))}
                                         style={fn.finput} />
                                 </div>
                                 <div style={fn.fieldG}>
-                                    <label style={fn.flabel}>Category</label>
+                                    <label style={fn.flabel}>Category (Optional)</label>
                                     <select value={finForm.category}
                                         onChange={e => setFinForm(f => ({ ...f, category: e.target.value }))}
                                         style={fn.finput}>
+                                        <option value="other">General / Other</option>
                                         {CATEGORY_SLUGS.map(s => <option key={s} value={s}>{CATEGORY_LABELS[s]}</option>)}
                                     </select>
                                 </div>
@@ -634,13 +744,15 @@ export default function AdminPage() {
                             </div>
                             <button disabled={finSaving} style={{ ...fn.saveRecordBtn, opacity: finSaving ? 0.7 : 1 }}
                                 onClick={async () => {
-                                    if (!finForm.product_name || !finForm.unit_price) {
-                                        showToast('Product name and price are required', 'error'); return;
+                                    if (!finForm.unit_price) {
+                                        showToast('Amount/Price is required', 'error'); return;
                                     }
+                                    const entryName = finForm.product_name.trim() || 'Daily Sales';
                                     setFinSaving(true);
                                     const total = Math.round((Number(finForm.quantity) || 1) * (Number(finForm.unit_price) || 0));
                                     const { error } = await addFinanceRecord({
                                         ...finForm,
+                                        product_name: entryName,
                                         quantity: Number(finForm.quantity) || 1,
                                         unit_price: Number(finForm.unit_price),
                                         total_amount: total,
