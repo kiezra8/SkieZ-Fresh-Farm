@@ -22,7 +22,7 @@ export default function CategoriesSection() {
                         onKeyDown={e => e.key === 'Enter' && navigate(`/products?category=${cat.slug}`)}
                     >
                         <div className="category-img-wrap">
-                            <img src={cat.image} alt={cat.name} loading="lazy" />
+                            <img src={cat.image} alt={cat.name} fetchpriority="high" decoding="async" />
                             <span className="category-badge">{cat.badge}</span>
                         </div>
                         <div className="category-info">

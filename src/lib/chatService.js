@@ -96,24 +96,32 @@ export async function sendMessage(sessionId, text, isAdmin = false, senderName =
     };
 
     // Update last_message_at; increment unread counter for the other party
+    let rpcError = null;
     if (isAdmin) {
         // Admin sent → increment user_unread, reset admin_unread
-        await supabase.rpc('increment_user_unread', { session_id: sessionId });
+        const { error: err } = await supabase.rpc('increment_user_unread', { session_id: sessionId });
+        rpcError = err;
     } else {
         // User sent → increment admin_unread, reset user_unread
-        await supabase.rpc('increment_admin_unread', { session_id: sessionId });
+        const { error: err } = await supabase.rpc('increment_admin_unread', { session_id: sessionId });
+        rpcError = err;
     }
+    if (rpcError) console.error('Chat RPC error:', rpcError);
 
-    await supabase
+    const { error: sessionUpdateError } = await supabase
         .from('chat_sessions')
         .update({ last_message_at: new Date().toISOString() })
         .eq('id', sessionId);
+    if (sessionUpdateError) console.error('Chat session update error:', sessionUpdateError);
 
-    return await supabase
+    const result = await supabase
         .from('chat_messages')
         .insert([msg])
         .select()
         .single();
+    
+    if (result.error) console.error('Chat message insert error:', result.error);
+    return result;
 }
 
 // ── Mark messages as read ──────────────────────────────────────────────────────

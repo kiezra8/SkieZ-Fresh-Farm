@@ -1,5 +1,5 @@
 -- ─────────────────────────────────────────────────────────────────────────────
--- SkieZ Fresh Farm — In-App Chat Schema (FIXED)
+-- SkieZ Fresh Farm — In-App Chat Schema (REUSABLE)
 -- Run this in: Supabase Dashboard → SQL Editor → New query
 -- ─────────────────────────────────────────────────────────────────────────────
 
@@ -35,14 +35,14 @@ create index if not exists idx_chat_messages_created  on public.chat_messages(cr
 create or replace function increment_user_unread(session_id uuid)
 returns void as $$
     update public.chat_sessions
-    set user_unread = user_unread + 1
+    set user_unread = user_unread + 1, admin_unread = 0
     where id = session_id;
 $$ language sql security definer;
 
 create or replace function increment_admin_unread(session_id uuid)
 returns void as $$
     update public.chat_sessions
-    set admin_unread = admin_unread + 1
+    set admin_unread = admin_unread + 1, user_unread = 0
     where id = session_id;
 $$ language sql security definer;
 
@@ -50,7 +50,14 @@ $$ language sql security definer;
 alter table public.chat_sessions enable row level security;
 alter table public.chat_messages enable row level security;
 
--- ─── RLS Policies — fully open (security via app logic) ───────────────────────
+-- ─── RLS Policies — cleanup first ─────────────────────────────────────────────
+drop policy if exists "chat_sessions_insert" on public.chat_sessions;
+drop policy if exists "chat_sessions_select" on public.chat_sessions;
+drop policy if exists "chat_sessions_update" on public.chat_sessions;
+drop policy if exists "chat_messages_insert" on public.chat_messages;
+drop policy if exists "chat_messages_select" on public.chat_messages;
+
+-- ─── RLS Policies — recreate ──────────────────────────────────────────────────
 -- Sessions: anyone can create/read/update
 create policy "chat_sessions_insert" on public.chat_sessions
     for insert with check (true);

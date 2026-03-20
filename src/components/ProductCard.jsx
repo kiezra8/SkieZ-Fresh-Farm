@@ -33,7 +33,7 @@ export default function ProductCard({ product }) {
     return (
         <div className="product-card" onClick={handleCardClick} style={{ cursor: 'pointer' }}>
             <div className="product-img-wrap">
-                <img src={product.image} alt={product.name} loading="lazy" />
+                <img src={product.image} alt={product.name} decoding="async" />
                 {product.discount > 0 && (
                     <span className="product-discount-badge">-{product.discount}%</span>
                 )}

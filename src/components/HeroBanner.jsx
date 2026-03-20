@@ -28,8 +28,15 @@ export default function HeroBanner() {
                     <div
                         key={slide.id}
                         className={`hero-slide${i === current ? ' active' : ''}`}
-                        style={{ backgroundImage: `url(${slide.bg})` }}
                     >
+                        <img 
+                            src={slide.bg} 
+                            alt={slide.title} 
+                            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: -1 }}
+                            fetchpriority={i === 0 ? "high" : "auto"}
+                            loading={i === 0 ? "eager" : "lazy"}
+                            decoding="async"
+                        />
                         <div className="hero-overlay">
                             <div className="hero-content">
                                 <span className="hero-tag">{slide.tag}</span>

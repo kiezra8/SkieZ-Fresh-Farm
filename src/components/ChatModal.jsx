@@ -148,7 +148,14 @@ export default function ChatModal({ isOpen, onClose, user }) {
         const { data: sent, error } = await sendMessage(session.id, msg, false, displayName);
         setSending(false);
 
-        if (!error && sent) {
+        if (error) {
+            console.error('Send error:', error);
+            alert('Failed to send message. Please make sure the SQL was applied in Supabase and Realtime is enabled.');
+            setText(msg); // restore text so user doesn't lose it
+            return;
+        }
+
+        if (sent) {
             setMessages(prev => {
                 const exists = prev.find(m => m.id === sent.id);
                 return exists ? prev : [...prev, sent];
