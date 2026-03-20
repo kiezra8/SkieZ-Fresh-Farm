@@ -106,13 +106,20 @@ export async function sendMessage(sessionId, text, isAdmin = false, senderName =
         const { error: err } = await supabase.rpc('increment_admin_unread', { session_id: sessionId });
         rpcError = err;
     }
-    if (rpcError) console.error('Chat RPC error:', rpcError);
+    if (rpcError) {
+        console.error('Chat RPC error:', rpcError);
+        return { error: rpcError, data: null };
+    }
 
     const { error: sessionUpdateError } = await supabase
         .from('chat_sessions')
         .update({ last_message_at: new Date().toISOString() })
         .eq('id', sessionId);
-    if (sessionUpdateError) console.error('Chat session update error:', sessionUpdateError);
+    
+    if (sessionUpdateError) {
+        console.error('Chat session update error:', sessionUpdateError);
+        return { error: sessionUpdateError, data: null };
+    }
 
     const result = await supabase
         .from('chat_messages')

@@ -46,7 +46,7 @@ export default function ChatModal({ isOpen, onClose, user }) {
             const { session: s, error } = await getOrCreateSession(user?.id || null);
             if (error || !s) {
                 console.error('Session init error:', error);
-                alert('Connection failure: Please make sure you have applied the latest docs/chat_schema.sql in Supabase and enabled Realtime for chat_sessions and chat_messages.');
+                alert(`Connection failure: ${error?.message || JSON.stringify(error)}\n\nPlease tell me what this error says.`);
                 setLoading(false);
                 return;
             }
@@ -168,7 +168,7 @@ export default function ChatModal({ isOpen, onClose, user }) {
 
             if (error) {
                 console.error('Send error:', error);
-                alert('Send failed! Likely because the chat_messages table or policies do not exist. Please run the SQL in Supabase docs/chat_schema.sql.');
+                alert(`Send failed! Error: ${error.message || JSON.stringify(error)}\n\nPlease tell me what this error says.`);
                 setText(msg); // restore text
                 return;
             }
