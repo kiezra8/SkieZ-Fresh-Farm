@@ -42,45 +42,55 @@ export default function ChatModal({ isOpen, onClose, user }) {
     // ── Init session ───────────────────────────────────────────────────────────
     const initSession = useCallback(async (displayName) => {
         setLoading(true);
-        const { session: s, error } = await getOrCreateSession(user?.id || null);
-        if (error || !s) { setLoading(false); return; }
+        try {
+            const { session: s, error } = await getOrCreateSession(user?.id || null);
+            if (error || !s) {
+                console.error('Session init error:', error);
+                alert('Connection failure: Please make sure you have applied the latest docs/chat_schema.sql in Supabase and enabled Realtime for chat_sessions and chat_messages.');
+                setLoading(false);
+                return;
+            }
 
-        if (displayName) {
-            await updateSessionName(s.id, displayName);
-            setGuestName(displayName);
+            if (displayName) {
+                await updateSessionName(s.id, displayName);
+                setGuestName(displayName);
+            }
+
+            setSession(s);
+
+            // Load existing messages
+            const { data: msgs } = await fetchMessages(s.id);
+            setMessages(msgs || []);
+            await markRead(s.id, false);
+            setLoading(false);
+
+            setTimeout(() => scrollToBottom(false), 100);
+
+            // Subscribe to new messages
+            if (channelRef.current) channelRef.current.unsubscribe();
+            channelRef.current = subscribeToMessages(s.id, (newMsg) => {
+                setMessages(prev => {
+                    const exists = prev.find(m => m.id === newMsg.id);
+                    if (exists) return prev;
+                    if (newMsg.is_admin) {
+                        playNotificationSound(false);
+                    }
+                    return [...prev, newMsg];
+                });
+
+                setScrolledUp(sv => {
+                    if (!sv) {
+                        setTimeout(() => scrollToBottom(), 50);
+                    } else {
+                        if (newMsg.is_admin) setUnreadCount(c => c + 1);
+                    }
+                    return sv;
+                });
+            });
+        } catch (err) {
+            console.error('Chat init crash:', err);
+            setLoading(false);
         }
-
-        setSession(s);
-
-        // Load existing messages
-        const { data: msgs } = await fetchMessages(s.id);
-        setMessages(msgs || []);
-        await markRead(s.id, false);
-        setLoading(false);
-
-        setTimeout(() => scrollToBottom(false), 100);
-
-        // Subscribe to new messages
-        if (channelRef.current) channelRef.current.unsubscribe();
-        channelRef.current = subscribeToMessages(s.id, (newMsg) => {
-            setMessages(prev => {
-                const exists = prev.find(m => m.id === newMsg.id);
-                if (exists) return prev;
-                if (newMsg.is_admin) {
-                    playNotificationSound(false);
-                }
-                return [...prev, newMsg];
-            });
-
-            setScrolledUp(sv => {
-                if (!sv) {
-                    setTimeout(() => scrollToBottom(), 50);
-                } else {
-                    if (newMsg.is_admin) setUnreadCount(c => c + 1);
-                }
-                return sv;
-            });
-        });
     }, [user, scrollToBottom]);
 
     // When modal opens
@@ -103,6 +113,7 @@ export default function ChatModal({ isOpen, onClose, user }) {
     useEffect(() => {
         if (!isOpen) {
             hasInitRef.current = false;
+            setSession(null);
             if (channelRef.current) {
                 channelRef.current.unsubscribe();
                 channelRef.current = null;
@@ -139,28 +150,41 @@ export default function ChatModal({ isOpen, onClose, user }) {
     };
 
     const handleSend = async () => {
-        if (!text.trim() || !session || sending) return;
+        if (!text.trim()) return;
+        if (!session) {
+            alert('Wait a moment... still connecting to the chat server. If this takes long, check that you ran the SQL in Supabase.');
+            return;
+        }
+        if (sending) return;
+
         const msg = text.trim();
         setText('');
         setSending(true);
 
-        const displayName = user?.user_metadata?.full_name || user?.email || getGuestName() || nameInput || 'Guest';
-        const { data: sent, error } = await sendMessage(session.id, msg, false, displayName);
-        setSending(false);
+        try {
+            const displayName = user?.user_metadata?.full_name || user?.email || getGuestName() || nameInput || 'Guest';
+            const { data: sent, error } = await sendMessage(session.id, msg, false, displayName);
+            setSending(false);
 
-        if (error) {
-            console.error('Send error:', error);
-            alert('Failed to send message. Please make sure the SQL was applied in Supabase and Realtime is enabled.');
-            setText(msg); // restore text so user doesn't lose it
-            return;
-        }
+            if (error) {
+                console.error('Send error:', error);
+                alert('Send failed! Likely because the chat_messages table or policies do not exist. Please run the SQL in Supabase docs/chat_schema.sql.');
+                setText(msg); // restore text
+                return;
+            }
 
-        if (sent) {
-            setMessages(prev => {
-                const exists = prev.find(m => m.id === sent.id);
-                return exists ? prev : [...prev, sent];
-            });
-            setTimeout(() => scrollToBottom(), 50);
+            if (sent) {
+                setMessages(prev => {
+                    const exists = prev.find(m => m.id === sent.id);
+                    return exists ? prev : [...prev, sent];
+                });
+                setTimeout(() => scrollToBottom(), 50);
+            }
+        } catch (err) {
+            console.error('handleSend crash:', err);
+            setSending(false);
+            alert('Something went wrong. Check your internet connection or Supabase settings.');
+            setText(msg);
         }
     };
 
