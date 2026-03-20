@@ -23,12 +23,8 @@ export default function CategoriesSection() {
                     >
                         <div className="category-img-wrap">
                             <img src={cat.image} alt={cat.name} fetchpriority="high" decoding="async" />
-                            <span className="category-badge">{cat.badge}</span>
                         </div>
-                        <div className="category-info">
-                            <div className="category-name">{cat.name}</div>
-                            <div className="category-count">{cat.count} products</div>
-                        </div>
+                        <div className="category-name">{cat.name}</div>
                     </div>
                 ))}
             </div>
