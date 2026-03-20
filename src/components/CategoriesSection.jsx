@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { FiArrowRight } from 'react-icons/fi';
 import { useData } from '../context/DataContext';
 
 export default function CategoriesSection() {
@@ -10,9 +9,6 @@ export default function CategoriesSection() {
         <section className="categories-section">
             <div className="section-header">
                 <h2 className="section-title">Shop by Category</h2>
-                <button className="see-all" onClick={() => navigate('/categories')}>
-                    See All <FiArrowRight />
-                </button>
             </div>
 
             <div className="categories-grid">

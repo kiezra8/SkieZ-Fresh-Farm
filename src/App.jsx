@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
 import { DataProvider } from './context/DataContext';
+import { useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import CartDrawer from './components/CartDrawer';
 import ChatModal from './components/ChatModal';
@@ -16,6 +17,7 @@ import AdminPage from './pages/AdminPage';
 function AppInner() {
     const [chatOpen, setChatOpen] = useState(false);
     const location = useLocation();
+    const { user } = useAuth();
 
     const isAdmin = location.pathname.startsWith('/admin');
 
@@ -31,7 +33,13 @@ function AppInner() {
         <>
             {!isAdmin && <Navbar onChatOpen={() => setChatOpen(true)} activePage={getActivePage()} />}
             {!isAdmin && <CartDrawer />}
-            {!isAdmin && <ChatModal isOpen={chatOpen} onClose={() => setChatOpen(false)} />}
+            {!isAdmin && (
+                <ChatModal
+                    isOpen={chatOpen}
+                    onClose={() => setChatOpen(false)}
+                    user={user}
+                />
+            )}
 
             <Routes>
                 <Route path="/" element={<HomePage />} />

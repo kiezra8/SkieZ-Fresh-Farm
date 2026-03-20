@@ -28,9 +28,6 @@ export default function Navbar({ onChatOpen, activePage }) {
 
     return (
         <>
-            <div className="announcement-bar">
-                🚚 Free delivery on orders above KSh 1,500 &nbsp;|&nbsp; 🌱 100% Fresh Produce &nbsp;|&nbsp; ⚡ Same Day Delivery Available
-            </div>
             <nav className="navbar">
                 <div className="navbar-inner">
                     <Link to="/" className="nav-logo">
