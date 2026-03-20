@@ -12,11 +12,6 @@ import {
     fetchDailyRevenue, fetchWeeklyRevenue,
     fetchMonthlyRevenue, fetchTopProducts,
 } from '../lib/financeService';
-import {
-    fetchAllSessions, fetchMessages, sendMessage,
-    subscribeToMessages, subscribeToAllMessages, subscribeToSessions,
-    markRead, playNotificationSound,
-} from '../lib/chatService';
 
 const ADMIN_EMAIL = 'israelezrakisakye@gmail.com';
 
@@ -183,19 +178,6 @@ export default function AdminPage() {
 
     // ── Data state ─────────────────────────────────────────────────────────────
     const [tab, setTab] = useState('products');
-
-    // ── Chat state ────────────────────────────────────────────────────────────
-    const [chatSessions, setChatSessions] = useState([]);
-    const [activeSession, setActiveSession] = useState(null);
-    const [chatMessages, setChatMessages] = useState([]);
-    const [chatReply, setChatReply] = useState('');
-    const [chatSending, setChatSending] = useState(false);
-    const [chatLoading, setChatLoading] = useState(false);
-    const [chatUnread, setChatUnread] = useState(0);
-    const chatBottomRef = useRef(null);
-    const chatChannelRef = useRef(null);
-    const allMsgChannelRef = useRef(null);
-    const sessionChannelRef = useRef(null);
     const [products, setProducts] = useState([]);
     const [orders, setOrders] = useState([]);
     const [stats, setStats] = useState({});
@@ -286,99 +268,6 @@ export default function AdminPage() {
     useEffect(() => {
         if (isAdmin) loadAll();
     }, [isAdmin, loadAll]);
-
-    // ── Load chat sessions ────────────────────────────────────────────────────
-    const loadChatSessions = useCallback(async () => {
-        setChatLoading(true);
-        const { data } = await fetchAllSessions();
-        if (data) {
-            setChatSessions(data);
-            // Sum unread across all sessions
-            const total = data.reduce((acc, s) => acc + (s.admin_unread || 0), 0);
-            setChatUnread(total);
-        }
-        setChatLoading(false);
-    }, []);
-
-    useEffect(() => {
-        if (!isAdmin) return;
-        loadChatSessions();
-
-        // Subscribe to ALL new messages → loud notification + refresh session list
-        allMsgChannelRef.current = subscribeToAllMessages((newMsg) => {
-            if (!newMsg.is_admin) {
-                // A user sent a message
-                playNotificationSound(true);
-                setChatUnread(c => c + 1);
-                loadChatSessions();
-                // If this session is open, append the message
-                setActiveSession(cur => {
-                    if (cur && cur.id === newMsg.session_id) {
-                        setChatMessages(prev => {
-                            if (prev.find(m => m.id === newMsg.id)) return prev;
-                            return [...prev, newMsg];
-                        });
-                        setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 60);
-                    }
-                    return cur;
-                });
-            }
-        });
-
-        // Subscribe to session list changes
-        sessionChannelRef.current = subscribeToSessions(() => {
-            loadChatSessions();
-        });
-
-        return () => {
-            allMsgChannelRef.current?.unsubscribe();
-            sessionChannelRef.current?.unsubscribe();
-        };
-    }, [isAdmin, loadChatSessions]);
-
-    // ── Open a specific session ───────────────────────────────────────────────
-    const openChatSession = useCallback(async (session) => {
-        setActiveSession(session);
-        setChatMessages([]);
-        setChatLoading(true);
-        const { data } = await fetchMessages(session.id);
-        setChatMessages(data || []);
-        setChatLoading(false);
-        await markRead(session.id, true);
-        setChatSessions(prev => prev.map(s =>
-            s.id === session.id ? { ...s, admin_unread: 0 } : s
-        ));
-        setChatUnread(prev => Math.max(0, prev - (session.admin_unread || 0)));
-        setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'auto' }), 80);
-
-        // Subscribe to live messages in this session
-        if (chatChannelRef.current) chatChannelRef.current.unsubscribe();
-        chatChannelRef.current = subscribeToMessages(session.id, (newMsg) => {
-            setChatMessages(prev => {
-                if (prev.find(m => m.id === newMsg.id)) return prev;
-                return [...prev, newMsg];
-            });
-            if (!newMsg.is_admin) playNotificationSound(true);
-            setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
-        });
-    }, []);
-
-    // ── Admin reply ───────────────────────────────────────────────────────────
-    const handleAdminReply = async () => {
-        if (!chatReply.trim() || !activeSession || chatSending) return;
-        const msg = chatReply.trim();
-        setChatReply('');
-        setChatSending(true);
-        const { data: sent } = await sendMessage(activeSession.id, msg, true, 'SkieZ Farm');
-        setChatSending(false);
-        if (sent) {
-            setChatMessages(prev => {
-                if (prev.find(m => m.id === sent.id)) return prev;
-                return [...prev, sent];
-            });
-            setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
-        }
-    };
 
     // ── Toast ─────────────────────────────────────────────────────────────────
     const showToast = (msg, type = 'success') => {
@@ -551,13 +440,11 @@ export default function AdminPage() {
                     { key: 'products', label: '🥦 Products' },
                     { key: 'orders', label: '📦 Orders' },
                     { key: 'finance', label: '💰 Finance' },
-                    { key: 'chat', label: chatUnread > 0 ? `💬 Chat (${chatUnread})` : '💬 Chat' },
                 ].map(t => (
                     <button key={t.key} onClick={() => setTab(t.key)}
                         style={{
                             ...ds.tabBtn,
                             ...(tab === t.key ? ds.tabActive : {}),
-                            ...(t.key === 'chat' && chatUnread > 0 ? { color: '#f59e0b' } : {})
                         }}>
                         {t.label}
                     </button>
@@ -945,103 +832,6 @@ export default function AdminPage() {
                                     </div>
                                 ))}
                     </div>
-                </div>
-            )}
-
-            {/* ═══ CHAT TAB ═══ */}
-            {tab === 'chat' && (
-                <div style={ds.tabContent}>
-                    {!activeSession ? (
-                        // Session list
-                        <div>
-                            <div style={{ ...fn.addToggleRow, marginBottom: 8 }}>
-                                <span style={fn.sectionTitle}>💬 Customer Conversations</span>
-                                <button onClick={loadChatSessions} style={ds.refreshBtn}>↻ Refresh</button>
-                            </div>
-                            {chatLoading ? (
-                                <div style={ds.center}><div style={ds.spinner} /></div>
-                            ) : chatSessions.length === 0 ? (
-                                <div style={ds.empty}>No conversations yet 💬</div>
-                            ) : chatSessions.map(s => (
-                                <div
-                                    key={s.id}
-                                    onClick={() => openChatSession(s)}
-                                    style={{
-                                        display: 'flex', alignItems: 'center', gap: 12,
-                                        padding: '14px 16px', borderBottom: '1px solid #1e2130',
-                                        cursor: 'pointer', background: s.admin_unread > 0 ? 'rgba(245,158,11,0.06)' : '#0f1117',
-                                        transition: 'background .15s',
-                                    }}
-                                >
-                                    <div style={{ width: 44, height: 44, borderRadius: 22, background: 'linear-gradient(135deg,#10b981,#059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>👤</div>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontWeight: 700, fontSize: 14, color: s.admin_unread > 0 ? '#fff' : '#d1d5db', marginBottom: 2 }}>
-                                            {s.display_name || 'Guest'}
-                                        </div>
-                                        <div style={{ fontSize: 12, color: '#6b7280' }}>
-                                            {new Date(s.last_message_at).toLocaleString('en-UG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                        </div>
-                                    </div>
-                                    {s.admin_unread > 0 && (
-                                        <div style={{ background: '#f59e0b', color: '#000', fontWeight: 800, fontSize: 12, borderRadius: 12, minWidth: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px' }}>
-                                            {s.admin_unread}
-                                        </div>
-                                    )}
-                                    <div style={{ fontSize: 18, color: '#374151' }}>›</div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        // Active chat thread
-                        <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100dvh - 170px)' }}>
-                            {/* Thread header */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#1a1d27', borderBottom: '1px solid #2a2d3a', flexShrink: 0 }}>
-                                <button onClick={() => { setActiveSession(null); chatChannelRef.current?.unsubscribe(); }} style={{ background: 'none', border: 'none', color: '#10b981', fontSize: 22, cursor: 'pointer', lineHeight: 1 }}>‹</button>
-                                <div style={{ width: 36, height: 36, borderRadius: 18, background: 'linear-gradient(135deg,#10b981,#059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>👤</div>
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>{activeSession.display_name || 'Guest'}</div>
-                                    <div style={{ fontSize: 11, color: '#6b7280' }}>Customer</div>
-                                </div>
-                            </div>
-                            {/* Messages */}
-                            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                {chatLoading ? <div style={ds.center}><div style={ds.spinner} /></div> : null}
-                                {chatMessages.map(msg => (
-                                    <div key={msg.id} style={{ display: 'flex', justifyContent: msg.is_admin ? 'flex-end' : 'flex-start' }}>
-                                        <div style={{
-                                            maxWidth: '76%', padding: '10px 14px', borderRadius: msg.is_admin ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                                            background: msg.is_admin ? '#10b981' : '#1e2330',
-                                            color: msg.is_admin ? '#fff' : '#f0f0f0',
-                                            fontSize: 14, lineHeight: 1.5,
-                                        }}>
-                                            {msg.text}
-                                            <div style={{ fontSize: 10, color: msg.is_admin ? 'rgba(255,255,255,0.6)' : '#6b7280', marginTop: 4, textAlign: msg.is_admin ? 'right' : 'left' }}>
-                                                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                                <div ref={chatBottomRef} />
-                            </div>
-                            {/* Reply bar */}
-                            <div style={{ display: 'flex', gap: 10, padding: '12px 16px', background: '#1a1d27', borderTop: '1px solid #2a2d3a', flexShrink: 0 }}>
-                                <textarea
-                                    value={chatReply}
-                                    onChange={e => setChatReply(e.target.value)}
-                                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAdminReply(); } }}
-                                    placeholder="Type a reply..."
-                                    rows={1}
-                                    style={{ flex: 1, background: '#0f1117', border: '1px solid #374151', borderRadius: 20, padding: '10px 16px', color: '#f0f0f0', fontSize: 14, outline: 'none', resize: 'none', fontFamily: 'inherit', maxHeight: 100, overflowY: 'auto' }}
-                                />
-                                <button
-                                    onClick={handleAdminReply}
-                                    disabled={!chatReply.trim() || chatSending}
-                                    style={{ background: '#10b981', border: 'none', borderRadius: 20, width: 44, height: 44, flexShrink: 0, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: (!chatReply.trim() || chatSending) ? 0.5 : 1 }}
-                                    aria-label="Send reply"
-                                >➤</button>
-                            </div>
-                        </div>
-                    )}
                 </div>
             )}
 
