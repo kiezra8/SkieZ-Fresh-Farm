@@ -71,6 +71,10 @@ create policy "chat_sessions_update" on public.chat_sessions
 -- Messages: anyone can insert/read
 create policy "chat_messages_insert" on public.chat_messages
     for insert with check (true);
-
 create policy "chat_messages_select" on public.chat_messages
     for select using (true);
+
+-- ─── Force API Cache Reload ───────────────────────────────────────────────────
+-- This ensures the frontend can immediately see the new tables without a 404 error
+NOTIFY pgrst, 'reload schema';
+

@@ -89,6 +89,7 @@ export default function ChatModal({ isOpen, onClose, user }) {
             });
         } catch (err) {
             console.error('Chat init crash:', err);
+            alert(`Chat crashed while starting! Error: ${err.message || JSON.stringify(err)}. Please tell me this error.`);
             setLoading(false);
         }
     }, [user, scrollToBottom]);
@@ -288,26 +289,32 @@ export default function ChatModal({ isOpen, onClose, user }) {
                         )}
 
                         {/* ── Input bar ── */}
-                        <div className="chat-input-bar">
-                            <textarea
-                                ref={inputRef}
-                                className="chat-input"
-                                placeholder="Type a message..."
-                                value={text}
-                                onChange={e => setText(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                rows={1}
-                                maxLength={1000}
-                            />
-                            <button
-                                className="chat-send-btn"
-                                onClick={handleSend}
-                                disabled={!text.trim() || sending}
-                                aria-label="Send message"
-                            >
-                                <FiSend />
-                            </button>
-                        </div>
+                        {session ? (
+                            <div className="chat-input-bar">
+                                <textarea
+                                    ref={inputRef}
+                                    className="chat-input"
+                                    placeholder="Type a message..."
+                                    value={text}
+                                    onChange={e => setText(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    rows={1}
+                                    maxLength={1000}
+                                />
+                                <button
+                                    className="chat-send-btn"
+                                    onClick={handleSend}
+                                    disabled={!text.trim() || sending}
+                                    aria-label="Send message"
+                                >
+                                    <FiSend />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="chat-input-bar" style={{ justifyContent: 'center', padding: '16px', color: '#e63946', fontWeight: '600', fontSize: '13px' }}>
+                                ⚠️ Cannot chat: Database Connection Failed
+                            </div>
+                        )}
                     </>
                 )}
             </div>
